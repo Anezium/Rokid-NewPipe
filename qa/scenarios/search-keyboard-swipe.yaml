@@ -1,0 +1,35 @@
+id: search-keyboard-swipe
+name: "Swipe navigation reaches Search and tap opens the Rokid keyboard"
+risk: high
+app: Rokid-NewPipe
+requires:
+  phone: false
+  glasses: true
+  accessibility: false
+build:
+  commands:
+    - .\gradlew.bat :app:testDebugUnitTest
+    - .\gradlew.bat :app:assembleDebug
+steps:
+  -
+    type: launch
+    target: glasses
+    package: com.anezium.rokid.newpipe
+  -
+    type: keyevent
+    target: glasses
+    keys:
+      - 21
+      - 23
+  -
+    type: screenshot
+    target: glasses
+expect:
+  state:
+    searchFocusable: true
+    keyboardOverlayVisibleAfterTap: true
+artifacts:
+  - glasses_logcat
+  - screenshot
+notes:
+  - "R08 Stable mode maps backward/forward to previous/next media keys; MainActivity maps those to one-axis focus."

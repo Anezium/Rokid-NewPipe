@@ -59,7 +59,9 @@ public class StreamInfoItemHolder extends StreamMiniInfoItemHolder {
         }
         final StreamInfoItem item = (StreamInfoItem) infoItem;
 
-        itemAdditionalDetails.setText(getStreamInfoDetailLine(item));
+        final String detailLine = getStreamInfoDetailLine(item);
+        itemAdditionalDetails.setText(detailLine);
+        updateAccessibilityDescription(item, detailLine);
     }
 
     private String getStreamInfoDetailLine(final StreamInfoItem infoItem) {

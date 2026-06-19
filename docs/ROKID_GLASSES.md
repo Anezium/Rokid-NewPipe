@@ -8,7 +8,10 @@ Rokid NewPipe is based on TeamNewPipe/NewPipe and keeps the upstream Java/Kotlin
 - Rendering: black root, high-contrast text, outline controls, minimal filled surfaces.
 - Input: one swipe axis plus tap/back. Directional aliases are debounced so `DPAD_RIGHT` followed by `DPAD_DOWN` counts as one move.
 - Search: the Rokid keyboard is a one-axis carousel. Swipe cycles keys, tap inserts/activates, back closes it.
-- Player: swipe left/right seeks backward/forward by the configured NewPipe seek duration. Tap shows or activates playback controls.
+- Player: swipe left/right navigates controls. Seek-by-swipe is disabled so the same gestures can reach every button.
+- Player rail: `Play/Pause`, `Full`, quality, speed, subtitles, and close are exposed as focusable actions with readable labels.
+- Detail pages: comments are hidden in Rokid mode; use `Full` to keep video controls first.
+- Offline recovery: the error panel exposes a focusable Wi-Fi settings button when Android reports no network.
 
 ## Local Dev Loop
 
@@ -27,6 +30,14 @@ With an explicit ADB serial:
 ```powershell
 .\scripts\rokid-dev-loop.ps1 -Serial <serial> -Install -SmokeKeys
 ```
+
+R08/Rokid regression smoke:
+
+```powershell
+.\scripts\rokid-regression.ps1 -GlassesSerial <serial> -RunPlayer
+```
+
+The regression script builds/installs by default, captures launch/search/Wi-Fi/player screenshots, dumps the accessibility tree, and writes logs under `qa/artifacts/`.
 
 ## GitHub Workflow
 

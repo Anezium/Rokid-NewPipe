@@ -590,13 +590,9 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
 
-            final Fragment fragment = getSupportFragmentManager()
-                    .findFragmentById(R.id.fragment_player_holder);
-            if (fragment instanceof OnKeyDownListener && !bottomSheetHiddenOrCollapsed()
-                    && ((OnKeyDownListener) fragment).onKeyDown(event.getKeyCode())) {
+            if (dispatchToOnKeyDownListeners(getSupportFragmentManager(), event.getKeyCode())) {
                 return true;
             }
-
             if (RokidFocusNavigator.handle(this, event)) {
                 return true;
             }
@@ -609,13 +605,32 @@ public class MainActivity extends AppCompatActivity {
         final Fragment fragment = getSupportFragmentManager()
                 .findFragmentById(R.id.fragment_player_holder);
         if (fragment instanceof OnKeyDownListener
-                && !bottomSheetHiddenOrCollapsed()) {
+                && (RokidMode.enabled() || !bottomSheetHiddenOrCollapsed())) {
             // Provide keyDown event to fragment which then sends this event
             // to the main player service
             return ((OnKeyDownListener) fragment).onKeyDown(keyCode)
                     || super.onKeyDown(keyCode, event);
         }
         return super.onKeyDown(keyCode, event);
+    }
+
+    private boolean dispatchToOnKeyDownListeners(
+            @NonNull final FragmentManager fragmentManager,
+            final int keyCode
+    ) {
+        for (final Fragment fragment : fragmentManager.getFragments()) {
+            if (fragment == null || !fragment.isVisible()) {
+                continue;
+            }
+            if (fragment instanceof OnKeyDownListener
+                    && ((OnKeyDownListener) fragment).onKeyDown(keyCode)) {
+                return true;
+            }
+            if (dispatchToOnKeyDownListeners(fragment.getChildFragmentManager(), keyCode)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

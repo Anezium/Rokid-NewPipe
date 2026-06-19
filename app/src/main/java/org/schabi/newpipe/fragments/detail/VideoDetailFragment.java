@@ -105,6 +105,7 @@ import org.schabi.newpipe.player.playqueue.PlayQueueItem;
 import org.schabi.newpipe.player.playqueue.SinglePlayQueue;
 import org.schabi.newpipe.player.ui.MainPlayerUi;
 import org.schabi.newpipe.player.ui.VideoPlayerUi;
+import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.util.Constants;
 import org.schabi.newpipe.util.DeviceUtils;
 import org.schabi.newpipe.util.ExtractorHelper;
@@ -178,13 +179,16 @@ public final class VideoDetailFragment
     private final SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener =
             (sharedPreferences, key) -> {
                 if (getString(R.string.show_comments_key).equals(key)) {
-                    showComments = sharedPreferences.getBoolean(key, true);
+                    showComments = !RokidMode.enabled() && sharedPreferences.getBoolean(key, true);
+                    applyRokidTabDefaults();
                     tabSettingsChanged = true;
                 } else if (getString(R.string.show_next_video_key).equals(key)) {
                     showRelatedItems = sharedPreferences.getBoolean(key, true);
+                    applyRokidTabDefaults();
                     tabSettingsChanged = true;
                 } else if (getString(R.string.show_description_key).equals(key)) {
                     showDescription = sharedPreferences.getBoolean(key, true);
+                    applyRokidTabDefaults();
                     tabSettingsChanged = true;
                 }
             };
@@ -323,6 +327,7 @@ public final class VideoDetailFragment
         showDescription = prefs.getBoolean(getString(R.string.show_description_key), true);
         selectedTabTag = prefs.getString(
                 getString(R.string.stream_info_selected_tab_key), COMMENTS_TAB_TAG);
+        applyRokidTabDefaults();
         prefs.registerOnSharedPreferenceChangeListener(preferenceChangeListener);
 
         setupBroadcastReceiver();
@@ -894,6 +899,7 @@ public final class VideoDetailFragment
         if (pageAdapter.getCount() != 0) {
             selectedTabTag = pageAdapter.getItemTitle(binding.viewPager.getCurrentItem());
         }
+        applyRokidTabDefaults();
         pageAdapter.clearAllItems();
         tabIcons.clear();
         tabContentDescriptions.clear();
@@ -975,6 +981,9 @@ public final class VideoDetailFragment
     }
 
     private boolean shouldShowComments() {
+        if (RokidMode.enabled()) {
+            return false;
+        }
         try {
             return showComments && NewPipe.getService(serviceId)
                     .getServiceInfo()
@@ -982,6 +991,17 @@ public final class VideoDetailFragment
                     .contains(COMMENTS);
         } catch (final ExtractionException e) {
             return false;
+        }
+    }
+
+    private void applyRokidTabDefaults() {
+        if (!RokidMode.enabled()) {
+            return;
+        }
+        showComments = false;
+        if (COMMENTS_TAB_TAG.equals(selectedTabTag)) {
+            selectedTabTag = showRelatedItems ? RELATED_TAB_TAG
+                    : showDescription ? DESCRIPTION_TAB_TAG : EMPTY_TAB_TAG;
         }
     }
 
@@ -1032,6 +1052,9 @@ public final class VideoDetailFragment
 
     public void scrollToComment(final CommentsInfoItem comment) {
         final int commentsTabPos = pageAdapter.getItemPositionByTitle(COMMENTS_TAB_TAG);
+        if (commentsTabPos < 0) {
+            return;
+        }
         final Fragment fragment = pageAdapter.getItem(commentsTabPos);
         if (!(fragment instanceof CommentsFragment)) {
             return;

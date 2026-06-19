@@ -53,6 +53,32 @@ public final class RokidKeyMapper {
         }
     }
 
+    public static boolean isDirectionalKey(final int keyCode) {
+        return isPreviousKey(keyCode) || isNextKey(keyCode);
+    }
+
+    public static boolean isPreviousKey(final int keyCode) {
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_DPAD_LEFT:
+            case KeyEvent.KEYCODE_DPAD_UP:
+            case 184:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    public static boolean isNextKey(final int keyCode) {
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_DPAD_RIGHT:
+            case KeyEvent.KEYCODE_DPAD_DOWN:
+            case 183:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     private static Action debounce(final Action action) {
         final long now = SystemClock.elapsedRealtime();
         if (now - lastDirectionAt < DIRECTION_DEBOUNCE_MS) {

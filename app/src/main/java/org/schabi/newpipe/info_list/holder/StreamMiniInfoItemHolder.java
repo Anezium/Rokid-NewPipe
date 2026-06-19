@@ -88,6 +88,7 @@ public class StreamMiniInfoItemHolder extends InfoItemHolder {
 
         // Default thumbnail is shown on error, while loading and if the url is empty
         CoilHelper.INSTANCE.loadThumbnail(itemThumbnailView, item.getThumbnails());
+        updateAccessibilityDescription(item, "");
 
         itemView.setOnClickListener(view -> {
             if (itemBuilder.getOnStreamSelectedListener() != null) {
@@ -151,5 +152,16 @@ public class StreamMiniInfoItemHolder extends InfoItemHolder {
     private void disableLongClick() {
         itemView.setLongClickable(false);
         itemView.setOnLongClickListener(null);
+    }
+
+    protected void updateAccessibilityDescription(final StreamInfoItem item,
+                                                  final String additionalDetails) {
+        final String duration = itemDurationView.getVisibility() == View.VISIBLE
+                ? itemDurationView.getText().toString()
+                : "";
+        itemView.setContentDescription(Localization.concatenateStrings(
+                item.getName(), item.getUploaderName(), additionalDetails, duration));
+        itemView.setFocusable(true);
+        itemView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
     }
 }

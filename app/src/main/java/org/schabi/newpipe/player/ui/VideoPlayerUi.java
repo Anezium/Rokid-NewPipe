@@ -87,6 +87,7 @@ import org.schabi.newpipe.util.external_communication.KoreUtils;
 import org.schabi.newpipe.util.external_communication.ShareUtils;
 import org.schabi.newpipe.views.player.PlayerFastSeekOverlay;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -134,6 +135,7 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
     private PopupMenu audioTrackPopupMenu;
     protected PopupMenu playbackSpeedPopupMenu;
     private PopupMenu captionPopupMenu;
+    private int rokidActionIndex = -1;
 
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -184,7 +186,7 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
 
         qualityPopupMenu = new PopupMenu(themeWrapper, binding.qualityTextView);
         audioTrackPopupMenu = new PopupMenu(themeWrapper, binding.audioTrackTextView);
-        playbackSpeedPopupMenu = new PopupMenu(context, binding.playbackSpeed);
+        playbackSpeedPopupMenu = new PopupMenu(themeWrapper, binding.playbackSpeed);
         captionPopupMenu = new PopupMenu(themeWrapper, binding.captionTextView);
 
         binding.progressBarLoadingPanel.getIndeterminateDrawable()
@@ -193,8 +195,7 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
         binding.titleTextView.setSelected(true);
         binding.channelTextView.setSelected(true);
         if (RokidMode.enabled()) {
-            updateRokidSeekRailText();
-            binding.rokidSeekRail.setVisibility(View.VISIBLE);
+            configureRokidPlayerActions();
         }
 
         // Prevent hiding of bottom sheet via swipe inside queue
@@ -224,6 +225,20 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
         binding.playPauseButton.setOnClickListener(makeOnClickListener(player::playPause));
         binding.playPreviousButton.setOnClickListener(makeOnClickListener(player::playPrevious));
         binding.playNextButton.setOnClickListener(makeOnClickListener(player::playNext));
+
+        if (RokidMode.enabled()) {
+            binding.rokidActionPlayPause.setOnClickListener(makeOnClickListener(player::playPause));
+            binding.rokidActionFullscreen.setOnClickListener(makeOnClickListener(
+                    this::openRokidFullscreen));
+            binding.rokidActionQuality.setOnClickListener(makeOnClickListener(
+                    () -> clickIfVisible(binding.qualityTextView)));
+            binding.rokidActionSpeed.setOnClickListener(makeOnClickListener(
+                    () -> clickIfVisible(binding.playbackSpeed)));
+            binding.rokidActionCaptions.setOnClickListener(makeOnClickListener(
+                    () -> clickIfVisible(binding.captionTextView)));
+            binding.rokidActionClose.setOnClickListener(makeOnClickListener(
+                    () -> clickIfVisible(binding.playerCloseButton)));
+        }
 
         binding.moreOptionsButton.setOnClickListener(
                 makeOnClickListener(this::onMoreOptionsClicked));
@@ -300,6 +315,12 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
         binding.playPauseButton.setOnClickListener(null);
         binding.playPreviousButton.setOnClickListener(null);
         binding.playNextButton.setOnClickListener(null);
+        binding.rokidActionPlayPause.setOnClickListener(null);
+        binding.rokidActionFullscreen.setOnClickListener(null);
+        binding.rokidActionQuality.setOnClickListener(null);
+        binding.rokidActionSpeed.setOnClickListener(null);
+        binding.rokidActionCaptions.setOnClickListener(null);
+        binding.rokidActionClose.setOnClickListener(null);
 
         binding.moreOptionsButton.setOnClickListener(null);
         binding.moreOptionsButton.setOnLongClickListener(null);
@@ -692,6 +713,7 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
         }
 
         showOrHideButtons();
+        updateRokidPlayerActions(true);
         showSystemUIPartially();
 
         final long hideTime = binding.playbackControlRoot.isInTouchMode()
@@ -708,6 +730,7 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
             Log.d(TAG, "showControls() called");
         }
         showOrHideButtons();
+        updateRokidPlayerActions(true);
         showSystemUIPartially();
         controlsVisibilityHandler.removeCallbacksAndMessages(null);
         showHideShadow(true, duration);
@@ -721,10 +744,16 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
         }
 
         showOrHideButtons();
+        updateRokidPlayerActions();
 
         controlsVisibilityHandler.removeCallbacksAndMessages(null);
         controlsVisibilityHandler.postDelayed(() -> {
             showHideShadow(false, duration);
+            if (RokidMode.enabled()) {
+                rokidActionIndex = -1;
+                clearRokidActionSelection();
+                binding.rokidActionRail.setVisibility(View.GONE);
+            }
             animate(binding.playbackControlRoot, false, duration, AnimationType.ALPHA,
                     0, this::hideSystemUIIfNeeded);
         }, delay);
@@ -744,6 +773,17 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
 
         final boolean showPrev = playQueue.getIndex() != 0;
         final boolean showNext = playQueue.getIndex() + 1 != playQueue.getStreams().size();
+
+        if (RokidMode.enabled()) {
+            binding.playPreviousButton.setVisibility(View.GONE);
+            binding.playPreviousButton.setAlpha(0.0f);
+            binding.playNextButton.setVisibility(View.GONE);
+            binding.playNextButton.setAlpha(0.0f);
+            binding.playPauseButton.setVisibility(View.INVISIBLE);
+            binding.playPauseButton.setAlpha(0.0f);
+            updateRokidPlayerActions(isControlsVisible());
+            return;
+        }
 
         binding.playPreviousButton.setVisibility(showPrev ? View.VISIBLE : View.INVISIBLE);
         binding.playPreviousButton.setAlpha(showPrev ? 1.0f : 0.0f);
@@ -1527,18 +1567,28 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
     }
 
     private boolean onRokidKeyDown(final int keyCode) {
+        if (RokidKeyMapper.isDirectionalKey(keyCode)) {
+            if (isRokidActionRailVisible()) {
+                return moveRokidActionFocus(RokidKeyMapper.isNextKey(keyCode));
+            }
+            if (isControlsVisible()) {
+                showControlsThenHide();
+                return moveRokidActionFocus(RokidKeyMapper.isNextKey(keyCode));
+            }
+            return false;
+        }
+
         final RokidKeyMapper.Action action = RokidKeyMapper.map(keyCode);
         switch (action) {
             case DUPLICATE:
                 return true;
             case PREVIOUS:
-                return seekFromRokidKey(false);
             case NEXT:
-                return seekFromRokidKey(true);
+                return false;
             case SELECT:
                 return selectFromRokidKey();
             case BACK:
-                if (isControlsVisible()) {
+                if (isRokidActionRailVisible() || isControlsVisible()) {
                     hideControls(0, 0);
                     return true;
                 }
@@ -1548,28 +1598,95 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
         }
     }
 
-    private boolean seekFromRokidKey(final boolean forward) {
-        if (player.exoPlayerIsNull()
-                || player.getCurrentState() == org.schabi.newpipe.player.Player.STATE_BLOCKED) {
-            return true;
+    private boolean isRokidActionRailVisible() {
+        return RokidMode.enabled() && binding != null && binding.rokidActionRail != null
+                && binding.rokidActionRail.getVisibility() == View.VISIBLE
+                && binding.rokidActionRail.isShown();
+    }
+
+    private boolean moveRokidActionFocus(final boolean forward) {
+        if (!isRokidActionRailVisible()) {
+            showControlsThenHide();
         }
-        if (forward) {
-            player.fastForward();
+
+        final ArrayList<View> actions = getVisibleRokidActions();
+        if (actions.isEmpty()) {
+            return false;
+        }
+
+        final View focused = binding.getRoot().findFocus();
+        int index = rokidActionIndex;
+        for (int i = 0; i < actions.size(); i++) {
+            if (actions.get(i) == focused) {
+                index = i;
+                break;
+            }
+        }
+
+        final int targetIndex;
+        if (index < 0) {
+            targetIndex = forward ? 0 : actions.size() - 1;
+        } else if (forward) {
+            targetIndex = index == actions.size() - 1 ? 0 : index + 1;
         } else {
-            player.fastRewind();
+            targetIndex = index == 0 ? actions.size() - 1 : index - 1;
         }
-        updateRokidSeekRailText();
-        binding.playbackSeekBar.requestFocus();
-        showControls(0);
-        hideControls(DEFAULT_CONTROLS_DURATION, DPAD_CONTROLS_HIDE_TIME);
+
+        final View target = actions.get(targetIndex);
+        rokidActionIndex = targetIndex;
+        showControlsThenHide();
+        applyRokidActionSelection(actions);
+        target.requestFocusFromTouch();
+        target.requestFocus();
         return true;
     }
 
+    private ArrayList<View> getVisibleRokidActions() {
+        final ArrayList<View> actions = new ArrayList<>();
+        addVisibleAction(actions, binding.rokidActionPlayPause);
+        addVisibleAction(actions, binding.rokidActionFullscreen);
+        addVisibleAction(actions, binding.rokidActionQuality);
+        addVisibleAction(actions, binding.rokidActionSpeed);
+        addVisibleAction(actions, binding.rokidActionCaptions);
+        addVisibleAction(actions, binding.rokidActionClose);
+        return actions;
+    }
+
+    private void addVisibleAction(final ArrayList<View> actions, final View view) {
+        if (view.getVisibility() == View.VISIBLE && view.isShown() && view.isEnabled()) {
+            actions.add(view);
+        }
+    }
+
+    private void applyRokidActionSelection(final ArrayList<View> actions) {
+        clearRokidActionSelection();
+        if (rokidActionIndex >= 0 && rokidActionIndex < actions.size()) {
+            actions.get(rokidActionIndex).setSelected(true);
+        }
+    }
+
+    private void clearRokidActionSelection() {
+        binding.rokidActionPlayPause.setSelected(false);
+        binding.rokidActionFullscreen.setSelected(false);
+        binding.rokidActionQuality.setSelected(false);
+        binding.rokidActionSpeed.setSelected(false);
+        binding.rokidActionCaptions.setSelected(false);
+        binding.rokidActionClose.setSelected(false);
+    }
+
     private boolean selectFromRokidKey() {
-        if (!isControlsVisible()) {
-            binding.playPauseButton.requestFocus();
+        if (!isRokidActionRailVisible()) {
+            rokidActionIndex = 0;
             showControlsThenHide();
+            binding.rokidActionPlayPause.requestFocus();
+            applyRokidActionSelection(getVisibleRokidActions());
             showSystemUIPartially();
+            return true;
+        }
+
+        final ArrayList<View> actions = getVisibleRokidActions();
+        if (rokidActionIndex >= 0 && rokidActionIndex < actions.size()) {
+            actions.get(rokidActionIndex).performClick();
             return true;
         }
 
@@ -1582,13 +1699,80 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
         return true;
     }
 
-    private void updateRokidSeekRailText() {
-        if (!RokidMode.enabled() || binding.rokidSeekBack == null) {
+    private void configureRokidPlayerActions() {
+        rokidActionIndex = -1;
+        clearRokidActionSelection();
+        binding.rokidActionRail.setVisibility(View.GONE);
+        binding.playbackSeekBar.setFocusable(false);
+        binding.playbackSeekBar.setFocusableInTouchMode(false);
+        binding.playbackSeekBar.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        binding.playPreviousButton.setImportantForAccessibility(
+                View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        binding.playNextButton.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        binding.playPauseButton.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        updateRokidPlayerActions();
+    }
+
+    private void updateRokidPlayerActions() {
+        updateRokidPlayerActions(isControlsVisible());
+    }
+
+    private void updateRokidPlayerActions(final boolean controlsVisible) {
+        if (!RokidMode.enabled() || binding == null || binding.rokidActionRail == null) {
             return;
         }
-        final long seconds = retrieveSeekDurationFromPreferences(player) / 1000;
-        binding.rokidSeekBack.setText(context.getString(R.string.rokid_seek_backward, seconds));
-        binding.rokidSeekForward.setText(context.getString(R.string.rokid_seek_forward, seconds));
+
+        binding.rokidActionRail.setVisibility(controlsVisible ? View.VISIBLE : View.GONE);
+        if (!controlsVisible) {
+            rokidActionIndex = -1;
+            clearRokidActionSelection();
+        }
+        binding.rokidActionPlayPause.setText(player.getCurrentState() == STATE_PLAYING
+                ? R.string.pause : R.string.play);
+        binding.rokidActionPlayPause.setContentDescription(binding.rokidActionPlayPause.getText());
+
+        final CharSequence quality = binding.qualityTextView.getText();
+        binding.rokidActionQuality.setText(quality == null || quality.length() == 0
+                ? context.getString(R.string.rokid_player_quality) : quality);
+        binding.rokidActionQuality.setContentDescription(
+                context.getString(R.string.rokid_player_quality) + " "
+                        + binding.rokidActionQuality.getText());
+        binding.rokidActionQuality.setVisibility(
+                binding.qualityTextView.getVisibility() == View.VISIBLE ? View.VISIBLE : View.GONE);
+
+        binding.rokidActionSpeed.setText(binding.playbackSpeed.getText());
+        binding.rokidActionSpeed.setContentDescription(
+                context.getString(R.string.rokid_player_speed) + " "
+                        + binding.rokidActionSpeed.getText());
+
+        final boolean captionsVisible = binding.captionTextView.getVisibility() == View.VISIBLE;
+        binding.rokidActionCaptions.setText(R.string.rokid_player_subtitles);
+        binding.rokidActionCaptions.setVisibility(captionsVisible ? View.VISIBLE : View.GONE);
+        binding.rokidActionCaptions.setContentDescription(captionsVisible
+                ? context.getString(R.string.rokid_player_subtitles) + " "
+                + binding.captionTextView.getText()
+                : context.getString(R.string.rokid_player_subtitles));
+    }
+
+    private void openRokidFullscreen() {
+        if (binding.screenRotationButton.getVisibility() == View.VISIBLE && isFullscreen()) {
+            binding.screenRotationButton.performClick();
+            return;
+        }
+        if (binding.fullScreenButton.getVisibility() == View.VISIBLE) {
+            binding.fullScreenButton.performClick();
+            return;
+        }
+        if (player.getPlayQueue() != null) {
+            player.setRecovery();
+            NavigationHelper.playOnMainPlayer(context, player.getPlayQueue(), true);
+        }
+    }
+
+    private void clickIfVisible(@NonNull final View view) {
+        if (view.getVisibility() == View.VISIBLE && view.isEnabled()) {
+            view.performClick();
+        }
     }
 
     private void onMoreOptionsClicked() {

@@ -1,0 +1,33 @@
+id: r08-accessibility-tree
+name: "R08 Access Bridge can traverse NewPipe commands through Accessibility"
+risk: high
+app: Rokid-NewPipe
+requires:
+  phone: false
+  glasses: true
+  accessibility: true
+build:
+  commands:
+    - .\gradlew.bat :app:testDebugUnitTest
+    - .\gradlew.bat :app:assembleDebug
+steps:
+  -
+    type: launch
+    target: glasses
+    package: com.anezium.rokid.newpipe
+  -
+    type: uiautomator-dump
+    target: glasses
+  -
+    type: assert-nodes
+    target: glasses
+expect:
+  state:
+    hasClickableSearch: true
+    hasLabeledVideoRows: true
+    hasLabeledRokidPlayerActions: true
+artifacts:
+  - uiautomator.xml
+  - glasses_logcat
+notes:
+  - "R08 navigator accepts visible enabled clickable nodes or focusable nodes with ACTION_FOCUS; labels must come from text or contentDescription."

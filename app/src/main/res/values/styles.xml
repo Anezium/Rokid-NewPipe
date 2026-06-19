@@ -77,6 +77,9 @@
         <item name="colorAccent">@color/white</item>
         <item name="colorControlActivated">@color/white</item>
         <item name="colorControlHighlight">@color/selected_background_color</item>
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:textColorSecondary">@color/white_secondary</item>
+        <item name="android:textColorTertiary">@color/white_secondary</item>
         <item name="android:windowBackground">@color/black_background_color</item>
         <item name="windowBackground">@color/black_background_color</item>
 

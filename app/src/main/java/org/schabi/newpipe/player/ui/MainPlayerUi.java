@@ -68,6 +68,7 @@ import org.schabi.newpipe.player.playqueue.PlayQueueItem;
 import org.schabi.newpipe.player.playqueue.PlayQueueItemBuilder;
 import org.schabi.newpipe.player.playqueue.PlayQueueItemHolder;
 import org.schabi.newpipe.player.playqueue.PlayQueueItemTouchCallback;
+import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.util.DeviceUtils;
 import org.schabi.newpipe.util.NavigationHelper;
 import org.schabi.newpipe.util.external_communication.KoreUtils;
@@ -856,6 +857,12 @@ public final class MainPlayerUi extends VideoPlayerUi implements View.OnLayoutCh
 
     @Override
     protected void onPlaybackSpeedClicked() {
+        if (RokidMode.enabled()) {
+            playbackSpeedPopupMenu.show();
+            isSomePopupMenuVisible = true;
+            return;
+        }
+
         getParentActivity().ifPresent(activity ->
                 PlaybackParameterDialog.newInstance(player.getPlaybackSpeed(),
                                 player.getPlaybackPitch(), player.getPlaybackSkipSilence(),
