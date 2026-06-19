@@ -57,10 +57,15 @@ function Send-Key {
     Start-Sleep -Milliseconds 500
 }
 
+function Show-PlayerRail {
+    Invoke-GlassesAdb -Arguments @("shell", "input", "tap", "240", "135") | Out-Null
+    Start-Sleep -Seconds 1
+}
+
 function Invoke-RailAction {
     param([int]$RightSwipes)
     Start-Sleep -Seconds 9
-    Send-Key 23
+    Show-PlayerRail
     for ($index = 0; $index -lt $RightSwipes; $index++) {
         Send-Key 22
     }
@@ -132,33 +137,29 @@ if ($RunPlayer) {
     Start-Sleep -Milliseconds 600
     Invoke-GlassesAdb -Arguments @("shell", "input", "tap", "180", "574") | Out-Null
     Start-Sleep -Seconds 8
-    Send-Key 23
-    Send-Key 22
-    Send-Key 22
-    Send-Key 23
-    Start-Sleep -Seconds 1
+    Show-PlayerRail
     Save-DeviceScreenshot "04-player-rail"
     Save-UiDump "04-player-rail"
 
     Start-Sleep -Seconds 12
     Save-DeviceScreenshot "04-player-after-hide"
 
-    Invoke-RailAction 3
+    Invoke-RailAction 2
     Save-DeviceScreenshot "05-player-quality-menu"
     Save-UiDump "05-player-quality-menu"
     Send-Key 4
 
-    Invoke-RailAction 4
+    Invoke-RailAction 3
     Save-DeviceScreenshot "06-player-speed-menu"
     Save-UiDump "06-player-speed-menu"
     Send-Key 4
 
-    Invoke-RailAction 5
+    Invoke-RailAction 4
     Save-DeviceScreenshot "07-player-subs-menu"
     Save-UiDump "07-player-subs-menu"
     Send-Key 4
 
-    Invoke-RailAction 2
+    Invoke-RailAction 1
     Save-DeviceScreenshot "08-player-fullscreen"
     Save-UiDump "08-player-fullscreen"
 }

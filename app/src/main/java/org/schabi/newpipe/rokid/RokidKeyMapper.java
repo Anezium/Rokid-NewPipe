@@ -4,7 +4,7 @@ import android.os.SystemClock;
 import android.view.KeyEvent;
 
 public final class RokidKeyMapper {
-    private static final long DIRECTION_DEBOUNCE_MS = 260L;
+    private static final long DIRECTION_DEBOUNCE_MS = 420L;
     private static long lastDirectionAt;
 
     private RokidKeyMapper() {

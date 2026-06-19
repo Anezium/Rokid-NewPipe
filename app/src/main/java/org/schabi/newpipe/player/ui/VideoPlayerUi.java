@@ -1567,23 +1567,19 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
     }
 
     private boolean onRokidKeyDown(final int keyCode) {
-        if (RokidKeyMapper.isDirectionalKey(keyCode)) {
-            if (isRokidActionRailVisible()) {
-                return moveRokidActionFocus(RokidKeyMapper.isNextKey(keyCode));
-            }
-            if (isControlsVisible()) {
-                showControlsThenHide();
-                return moveRokidActionFocus(RokidKeyMapper.isNextKey(keyCode));
-            }
-            return false;
-        }
-
         final RokidKeyMapper.Action action = RokidKeyMapper.map(keyCode);
         switch (action) {
             case DUPLICATE:
                 return true;
             case PREVIOUS:
             case NEXT:
+                if (isRokidActionRailVisible()) {
+                    return moveRokidActionFocus(action == RokidKeyMapper.Action.NEXT);
+                }
+                if (isControlsVisible()) {
+                    showControlsThenHide();
+                    return moveRokidActionFocus(action == RokidKeyMapper.Action.NEXT);
+                }
                 return false;
             case SELECT:
                 return selectFromRokidKey();
@@ -1728,8 +1724,11 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
             clearRokidActionSelection();
         }
         binding.rokidActionPlayPause.setText(player.getCurrentState() == STATE_PLAYING
-                ? R.string.pause : R.string.play);
+                ? R.string.rokid_player_pause : R.string.rokid_player_play);
         binding.rokidActionPlayPause.setContentDescription(binding.rokidActionPlayPause.getText());
+        binding.rokidActionFullscreen.setText(R.string.rokid_player_fullscreen);
+        binding.rokidActionFullscreen.setContentDescription(
+                context.getString(R.string.rokid_player_fullscreen));
 
         final CharSequence quality = binding.qualityTextView.getText();
         binding.rokidActionQuality.setText(quality == null || quality.length() == 0
@@ -1752,6 +1751,10 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
                 ? context.getString(R.string.rokid_player_subtitles) + " "
                 + binding.captionTextView.getText()
                 : context.getString(R.string.rokid_player_subtitles));
+
+        binding.rokidActionClose.setText(R.string.rokid_player_close);
+        binding.rokidActionClose.setContentDescription(
+                context.getString(R.string.rokid_player_close));
     }
 
     private void openRokidFullscreen() {

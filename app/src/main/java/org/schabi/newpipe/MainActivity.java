@@ -49,8 +49,10 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.os.LocaleListCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
@@ -133,6 +135,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int ITEM_ID_ABOUT = 2;
 
     private static final int ORDER = 0;
+    private static final String ROKID_APP_LANGUAGE = "en";
     public static final String KEY_IS_IN_BACKGROUND = "is_in_background";
 
     private SharedPreferences sharedPreferences;
@@ -149,6 +152,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         Localization.migrateAppLanguageSettingIfNecessary(getApplicationContext());
+        forceEnglishUiForRokid();
         ThemeHelper.setDayNightMode(this);
         ThemeHelper.setTheme(this, ServiceHelper.getSelectedServiceId(this));
 
@@ -398,6 +402,19 @@ public class MainActivity extends AppCompatActivity {
             case ITEM_ID_ABOUT:
                 NavigationHelper.openAbout(this);
                 break;
+        }
+    }
+
+    private void forceEnglishUiForRokid() {
+        if (!RokidMode.enabled()) {
+            return;
+        }
+
+        final String currentLanguageTags =
+                AppCompatDelegate.getApplicationLocales().toLanguageTags();
+        if (!ROKID_APP_LANGUAGE.equals(currentLanguageTags)) {
+            AppCompatDelegate.setApplicationLocales(
+                    LocaleListCompat.forLanguageTags(ROKID_APP_LANGUAGE));
         }
     }
 

@@ -863,11 +863,14 @@
     <string name="rokid_seek_backward_static">-10s</string>
     <string name="rokid_seek_forward_static">+10s</string>
     <string name="rokid_wifi_settings">Wi-Fi</string>
-    <string name="rokid_player_actions">Player actions</string>
-    <string name="rokid_player_fullscreen">Full</string>
-    <string name="rokid_player_quality">Quality</string>
-    <string name="rokid_player_speed">Speed</string>
-    <string name="rokid_player_subtitles">Subs</string>
+    <string name="rokid_player_actions" translatable="false">Player actions</string>
+    <string name="rokid_player_play" translatable="false">Play</string>
+    <string name="rokid_player_pause" translatable="false">Pause</string>
+    <string name="rokid_player_fullscreen" translatable="false">Full</string>
+    <string name="rokid_player_quality" translatable="false">Quality</string>
+    <string name="rokid_player_speed" translatable="false">Speed</string>
+    <string name="rokid_player_subtitles" translatable="false">Subs</string>
+    <string name="rokid_player_close" translatable="false">Close</string>
     <string name="replay">Replay</string>
     <string name="more_options">More options</string>
     <string name="duration">Duration</string>
