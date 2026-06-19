@@ -27,6 +27,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -607,10 +608,6 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
 
-            if (RokidFocusNavigator.isRokidRailVisible(this)
-                    && RokidFocusNavigator.handle(this, event)) {
-                return true;
-            }
             if (dispatchToOnKeyDownListeners(getSupportFragmentManager(), event.getKeyCode())) {
                 return true;
             }
@@ -643,9 +640,7 @@ public class MainActivity extends AppCompatActivity {
             if (fragment == null || !fragment.isVisible()) {
                 continue;
             }
-            if (RokidMode.enabled()
-                    && fragment.getId() == R.id.fragment_player_holder
-                    && bottomSheetHiddenOrCollapsed()) {
+            if (shouldSkipRokidPlayerFragment(fragment)) {
                 continue;
             }
             if (fragment instanceof OnKeyDownListener
@@ -657,6 +652,28 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return false;
+    }
+
+    private boolean shouldSkipRokidPlayerFragment(@NonNull final Fragment fragment) {
+        if (!RokidMode.enabled()
+                || fragment.getId() != R.id.fragment_player_holder
+                || !bottomSheetHiddenOrCollapsed()) {
+            return false;
+        }
+
+        final View view = fragment.getView();
+        if (view == null || !view.isShown()) {
+            return true;
+        }
+
+        final Rect visibleRect = new Rect();
+        if (!view.getGlobalVisibleRect(visibleRect)) {
+            return true;
+        }
+
+        final int miniPlayerHeight =
+                getResources().getDimensionPixelSize(R.dimen.mini_player_height);
+        return visibleRect.height() <= miniPlayerHeight * 2;
     }
 
     @Override

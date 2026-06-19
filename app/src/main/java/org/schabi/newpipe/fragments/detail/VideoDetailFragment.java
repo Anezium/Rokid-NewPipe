@@ -33,6 +33,7 @@ import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -705,9 +706,46 @@ public final class VideoDetailFragment
 
     @Override
     public boolean onKeyDown(final int keyCode) {
+        if (RokidMode.enabled()
+                && isRokidSelectKey(keyCode)
+                && enterRokidFullscreenFromDetail()) {
+            return true;
+        }
+
         return isPlayerAvailable()
                 && player.UIs().get(VideoPlayerUi.class)
                 .map(playerUi -> playerUi.onKeyDown(keyCode)).orElse(false);
+    }
+
+    private boolean enterRokidFullscreenFromDetail() {
+        if (!isPlayerAvailable()
+                || !player.videoPlayerSelected()
+                || binding == null
+                || binding.detailThumbnailRootLayout == null
+                || !binding.detailThumbnailRootLayout.isShown()) {
+            return false;
+        }
+
+        final Optional<MainPlayerUi> playerUi = player.UIs().get(MainPlayerUi.class);
+        if (playerUi.isEmpty() || playerUi.get().isFullscreen()) {
+            return false;
+        }
+
+        playerUi.get().toggleFullscreen();
+        return true;
+    }
+
+    private boolean isRokidSelectKey(final int keyCode) {
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_DPAD_CENTER:
+            case KeyEvent.KEYCODE_ENTER:
+            case KeyEvent.KEYCODE_NUMPAD_ENTER:
+            case KeyEvent.KEYCODE_SPACE:
+            case 202:
+                return true;
+            default:
+                return false;
+        }
     }
 
     @Override

@@ -1621,7 +1621,7 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
 
         final int targetIndex;
         if (index < 0) {
-            targetIndex = forward ? Math.min(1, actions.size() - 1) : actions.size() - 1;
+            targetIndex = forward ? 0 : actions.size() - 1;
         } else if (forward) {
             targetIndex = index == actions.size() - 1 ? 0 : index + 1;
         } else {
@@ -1639,8 +1639,8 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
 
     private ArrayList<View> getVisibleRokidActions() {
         final ArrayList<View> actions = new ArrayList<>();
-        addVisibleAction(actions, binding.rokidActionFullscreen);
         addVisibleAction(actions, binding.rokidActionPlayPause);
+        addVisibleAction(actions, binding.rokidActionFullscreen);
         addVisibleAction(actions, binding.rokidActionQuality);
         addVisibleAction(actions, binding.rokidActionSpeed);
         addVisibleAction(actions, binding.rokidActionCaptions);
@@ -1674,11 +1674,8 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
         if (!isRokidActionRailVisible()) {
             rokidActionIndex = 0;
             showControlsThenHide();
-            final ArrayList<View> actions = getVisibleRokidActions();
-            if (!actions.isEmpty()) {
-                actions.get(rokidActionIndex).requestFocus();
-            }
-            applyRokidActionSelection(actions);
+            binding.rokidActionPlayPause.requestFocus();
+            applyRokidActionSelection(getVisibleRokidActions());
             showSystemUIPartially();
             return true;
         }

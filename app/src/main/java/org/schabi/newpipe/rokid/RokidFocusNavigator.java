@@ -48,19 +48,7 @@ public final class RokidFocusNavigator {
         final View root = activity.findViewById(android.R.id.content);
         final View current = activity.getCurrentFocus();
         if (isViewWithIdShown(root, R.id.rokidActionRail)) {
-            switch (action) {
-                case PREVIOUS:
-                    return moveRokidRailFocus(activity, root, current, false);
-                case NEXT:
-                    return moveRokidRailFocus(activity, root, current, true);
-                case SELECT:
-                    return clickRokidRailSelection(activity, root, current);
-                case BACK:
-                    ROKID_RAIL_INDICES.remove(activity);
-                    return false;
-                default:
-                    return false;
-            }
+            return false;
         }
         ROKID_RAIL_INDICES.remove(activity);
         switch (action) {
