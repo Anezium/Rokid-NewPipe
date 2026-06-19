@@ -603,6 +603,9 @@ public final class VideoDetailFragment
     }
 
     private void toggleTitleAndSecondaryControls() {
+        if (RokidMode.enabled()) {
+            return;
+        }
         if (binding.detailSecondaryControlPanel.getVisibility() == View.GONE) {
             binding.detailVideoTitleView.setMaxLines(10);
             animateRotation(binding.detailToggleSecondaryControlsView,
@@ -643,6 +646,7 @@ public final class VideoDetailFragment
                         ? View.VISIBLE
                         : View.GONE
         );
+        applyRokidDetailDefaults();
         accommodateForTvAndDesktopMode();
     }
 
@@ -1003,6 +1007,17 @@ public final class VideoDetailFragment
             selectedTabTag = showRelatedItems ? RELATED_TAB_TAG
                     : showDescription ? DESCRIPTION_TAB_TAG : EMPTY_TAB_TAG;
         }
+    }
+
+    private void applyRokidDetailDefaults() {
+        if (!RokidMode.enabled() || binding == null) {
+            return;
+        }
+
+        binding.detailControlPanel.setVisibility(View.GONE);
+        binding.detailSecondaryControlPanel.setVisibility(View.GONE);
+        binding.detailToggleSecondaryControlsView.setVisibility(View.GONE);
+        binding.detailMetaInfoSeparator.setVisibility(View.GONE);
     }
 
     public void updateTabLayoutVisibility() {

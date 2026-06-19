@@ -7,9 +7,11 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.widget.EditText;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
 
 import org.schabi.newpipe.R;
 
@@ -20,8 +22,15 @@ import java.util.WeakHashMap;
 public final class RokidFocusNavigator {
     private static final WeakHashMap<Activity, View> LAST_TARGETS = new WeakHashMap<>();
     private static final WeakHashMap<Activity, Integer> ROKID_RAIL_INDICES = new WeakHashMap<>();
+    private static final WeakHashMap<Activity, RecyclerFocusState> LAST_RECYCLER_STATES =
+            new WeakHashMap<>();
 
     private RokidFocusNavigator() {
+    }
+
+    public static boolean isRokidRailVisible(@NonNull final Activity activity) {
+        final View root = activity.findViewById(android.R.id.content);
+        return isViewWithIdShown(root, R.id.rokidActionRail);
     }
 
     public static boolean handle(
@@ -60,10 +69,10 @@ public final class RokidFocusNavigator {
             case NEXT:
                 return moveFocus(activity, root, current, View.FOCUS_FORWARD);
             case SELECT:
-                if (clickVisibleVideoPlayer(activity, root)) {
+                if (clickCurrent(activity, current)) {
                     return true;
                 }
-                return clickCurrent(activity, current);
+                return clickVisibleVideoPlayer(activity, root);
             case BACK:
                 return false;
             default:
@@ -85,7 +94,7 @@ public final class RokidFocusNavigator {
         final int currentIndex = getRokidRailIndex(activity, current, actions);
         final int targetIndex;
         if (currentIndex < 0) {
-            targetIndex = forward ? 0 : actions.size() - 1;
+            targetIndex = forward ? Math.min(1, actions.size() - 1) : actions.size() - 1;
         } else if (forward) {
             targetIndex = currentIndex == actions.size() - 1 ? 0 : currentIndex + 1;
         } else {
@@ -129,7 +138,19 @@ public final class RokidFocusNavigator {
         if (index < 0) {
             index = findCurrentIndex(LAST_TARGETS.get(activity), actions);
         }
+        if (index < 0) {
+            index = findSelectedIndex(actions);
+        }
         return index;
+    }
+
+    private static int findSelectedIndex(final ArrayList<View> actions) {
+        for (int i = 0; i < actions.size(); i++) {
+            if (actions.get(i).isSelected()) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private static boolean focusRokidRailTarget(
@@ -185,6 +206,15 @@ public final class RokidFocusNavigator {
             currentIndex = findCurrentIndex(LAST_TARGETS.get(activity), targets);
         }
 
+        final boolean forward = direction != View.FOCUS_BACKWARD;
+        if (currentIndex >= 0 && tryMoveWithinRecyclerView(
+                activity, targets.get(currentIndex), forward)) {
+            return true;
+        }
+        if (currentIndex < 0 && tryMoveFromRememberedRecycler(activity, root, forward)) {
+            return true;
+        }
+
         final int targetIndex;
         if (currentIndex < 0) {
             targetIndex = findInitialIndex(targets, direction);
@@ -200,7 +230,180 @@ public final class RokidFocusNavigator {
         }
         final boolean focused = requestRokidFocus(target);
         LAST_TARGETS.put(activity, target);
+        rememberRecyclerTarget(activity, target);
         return focused || target.isFocused();
+    }
+
+    private static boolean tryMoveWithinRecyclerView(
+            final Activity activity,
+            final View currentTarget,
+            final boolean forward
+    ) {
+        final RecyclerView recyclerView = findAncestorRecyclerView(currentTarget);
+        if (!isRokidRecycler(recyclerView)) {
+            return false;
+        }
+
+        final RecyclerView.ViewHolder holder =
+                recyclerView.findContainingViewHolder(currentTarget);
+        if (holder == null || holder.getBindingAdapterPosition() == RecyclerView.NO_POSITION) {
+            return false;
+        }
+
+        final boolean moved = focusRecyclerPosition(activity, recyclerView,
+                holder.getBindingAdapterPosition() + (forward ? 1 : -1));
+        return moved || forward;
+    }
+
+    private static boolean tryMoveFromRememberedRecycler(
+            final Activity activity,
+            final View root,
+            final boolean forward
+    ) {
+        final RecyclerFocusState state = LAST_RECYCLER_STATES.get(activity);
+        if (state == null) {
+            return false;
+        }
+
+        final RecyclerView recyclerView = findVisibleRecyclerViewById(root, state.recyclerViewId);
+        if (!isRokidRecycler(recyclerView)) {
+            return false;
+        }
+
+        final boolean moved = focusRecyclerPosition(activity, recyclerView,
+                state.adapterPosition + (forward ? 1 : -1));
+        return moved || forward;
+    }
+
+    private static boolean focusRecyclerPosition(
+            final Activity activity,
+            final RecyclerView recyclerView,
+            final int adapterPosition
+    ) {
+        final RecyclerView.Adapter<?> adapter = recyclerView.getAdapter();
+        if (adapter == null || adapterPosition < 0
+                || adapterPosition >= adapter.getItemCount()) {
+            return false;
+        }
+
+        recyclerView.stopScroll();
+        final RecyclerView.ViewHolder visibleHolder =
+                recyclerView.findViewHolderForAdapterPosition(adapterPosition);
+        if (visibleHolder != null) {
+            return focusRecyclerHolder(activity, recyclerView, visibleHolder, adapterPosition);
+        }
+
+        recyclerView.scrollToPosition(adapterPosition);
+        rememberRecyclerTarget(activity, recyclerView, adapterPosition);
+        recyclerView.post(() -> {
+            final RecyclerView.ViewHolder holder =
+                    recyclerView.findViewHolderForAdapterPosition(adapterPosition);
+            if (holder != null) {
+                focusRecyclerHolder(activity, recyclerView, holder, adapterPosition);
+            }
+        });
+        return true;
+    }
+
+    private static boolean focusRecyclerHolder(
+            final Activity activity,
+            final RecyclerView recyclerView,
+            final RecyclerView.ViewHolder holder,
+            final int adapterPosition
+    ) {
+        View target = findFirstRokidTarget(holder.itemView);
+        if (target == null) {
+            target = holder.itemView;
+        }
+        final boolean focused = requestRokidFocus(target);
+        LAST_TARGETS.put(activity, target);
+        rememberRecyclerTarget(activity, recyclerView, adapterPosition);
+        return focused || target.isFocused();
+    }
+
+    private static View findFirstRokidTarget(final View view) {
+        if (view == null || !view.isShown() || !view.isEnabled()
+                || view.getWidth() <= 1 || view.getHeight() <= 1) {
+            return null;
+        }
+        if (isRokidTarget(view)) {
+            return view;
+        }
+        if (view instanceof ViewGroup) {
+            final ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                final View target = findFirstRokidTarget(group.getChildAt(i));
+                if (target != null) {
+                    return target;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static RecyclerView findAncestorRecyclerView(final View view) {
+        View current = view;
+        while (current != null) {
+            if (current instanceof RecyclerView) {
+                return (RecyclerView) current;
+            }
+            final ViewParent parent = current.getParent();
+            if (!(parent instanceof View)) {
+                return null;
+            }
+            current = (View) parent;
+        }
+        return null;
+    }
+
+    private static RecyclerView findVisibleRecyclerViewById(final View view, final int id) {
+        if (view == null || !view.isShown() || id == View.NO_ID) {
+            return null;
+        }
+        if (view instanceof RecyclerView && view.getId() == id) {
+            return (RecyclerView) view;
+        }
+        if (view instanceof ViewGroup) {
+            final ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                final RecyclerView recyclerView =
+                        findVisibleRecyclerViewById(group.getChildAt(i), id);
+                if (recyclerView != null) {
+                    return recyclerView;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static boolean isRokidRecycler(final RecyclerView recyclerView) {
+        return recyclerView != null
+                && recyclerView.isShown()
+                && recyclerView.isEnabled()
+                && recyclerView.getAdapter() != null
+                && !hasAncestorWithId(recyclerView, R.id.rokidActionRail);
+    }
+
+    private static void rememberRecyclerTarget(final Activity activity, final View target) {
+        final RecyclerView recyclerView = findAncestorRecyclerView(target);
+        if (!isRokidRecycler(recyclerView)) {
+            return;
+        }
+        final RecyclerView.ViewHolder holder = recyclerView.findContainingViewHolder(target);
+        if (holder != null && holder.getBindingAdapterPosition() != RecyclerView.NO_POSITION) {
+            rememberRecyclerTarget(activity, recyclerView, holder.getBindingAdapterPosition());
+        }
+    }
+
+    private static void rememberRecyclerTarget(
+            final Activity activity,
+            final RecyclerView recyclerView,
+            final int adapterPosition
+    ) {
+        if (recyclerView.getId() != View.NO_ID) {
+            LAST_RECYCLER_STATES.put(activity,
+                    new RecyclerFocusState(recyclerView.getId(), adapterPosition));
+        }
     }
 
     private static ArrayList<View> collectTargets(final View root) {
@@ -282,10 +485,21 @@ public final class RokidFocusNavigator {
         if (target == null || !target.isEnabled()) {
             return false;
         }
+        if (!isVisibleInsideWindow(activity, target)) {
+            return false;
+        }
 
         dispatchTap(activity, target);
         focusFirstRokidRailTarget(activity);
         return true;
+    }
+
+    private static boolean isVisibleInsideWindow(final Activity activity, final View target) {
+        final Rect targetRect = new Rect();
+        final Rect rootRect = getScreenRect(activity.getWindow().getDecorView());
+        return target.getGlobalVisibleRect(targetRect)
+                && Rect.intersects(rootRect, targetRect)
+                && rootRect.contains(targetRect.centerX(), targetRect.centerY());
     }
 
     private static void dispatchTap(final Activity activity, final View target) {
@@ -454,6 +668,16 @@ public final class RokidFocusNavigator {
         final ArrayList<View> targets = collectRokidRailTargets(root);
         if (!targets.isEmpty()) {
             focusRokidRailTarget(activity, targets, 0);
+        }
+    }
+
+    private static final class RecyclerFocusState {
+        private final int recyclerViewId;
+        private final int adapterPosition;
+
+        private RecyclerFocusState(final int recyclerViewId, final int adapterPosition) {
+            this.recyclerViewId = recyclerViewId;
+            this.adapterPosition = adapterPosition;
         }
     }
 }

@@ -607,6 +607,10 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
 
+            if (RokidFocusNavigator.isRokidRailVisible(this)
+                    && RokidFocusNavigator.handle(this, event)) {
+                return true;
+            }
             if (dispatchToOnKeyDownListeners(getSupportFragmentManager(), event.getKeyCode())) {
                 return true;
             }
@@ -637,6 +641,11 @@ public class MainActivity extends AppCompatActivity {
     ) {
         for (final Fragment fragment : fragmentManager.getFragments()) {
             if (fragment == null || !fragment.isVisible()) {
+                continue;
+            }
+            if (RokidMode.enabled()
+                    && fragment.getId() == R.id.fragment_player_holder
+                    && bottomSheetHiddenOrCollapsed()) {
                 continue;
             }
             if (fragment instanceof OnKeyDownListener

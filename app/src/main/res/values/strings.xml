@@ -867,6 +867,7 @@
     <string name="rokid_player_play" translatable="false">Play</string>
     <string name="rokid_player_pause" translatable="false">Pause</string>
     <string name="rokid_player_fullscreen" translatable="false">Full</string>
+    <string name="rokid_player_exit_fullscreen" translatable="false">Exit</string>
     <string name="rokid_player_quality" translatable="false">Quality</string>
     <string name="rokid_player_speed" translatable="false">Speed</string>
     <string name="rokid_player_subtitles" translatable="false">Subs</string>
