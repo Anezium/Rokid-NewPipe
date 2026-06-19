@@ -1,6 +1,12 @@
 <p align="center"><a href="https://newpipe.net"><img src="assets/new_pipe_icon_5.png" width="150"></a></p> 
-<h2 align="center"><b>NewPipe</b></h2>
-<h4 align="center">A libre lightweight streaming front-end for Android.</h4>
+<h2 align="center"><b>Rokid NewPipe</b></h2>
+<h4 align="center">A Rokid glasses focused build of NewPipe.</h4>
+
+Rokid NewPipe is an AR/glasses-focused build based on
+[TeamNewPipe/NewPipe](https://github.com/TeamNewPipe/NewPipe). It keeps upstream attribution and
+source layout while adapting the Android package to `com.anezium.rokid.newpipe` and adding
+one-axis Rokid glasses controls, an on-device carousel keyboard, AR-safe black UI defaults, and a
+Rokid build/test workflow. See [docs/ROKID_GLASSES.md](docs/ROKID_GLASSES.md).
 
 <p align="center"><a href="https://f-droid.org/packages/org.schabi.newpipe/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on-en.svg" alt="Get it on F-Droid" width=206/></a></p>
 

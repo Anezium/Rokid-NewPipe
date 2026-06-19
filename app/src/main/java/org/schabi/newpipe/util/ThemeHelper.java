@@ -42,6 +42,7 @@ import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.info_list.ItemViewMode;
+import org.schabi.newpipe.rokid.RokidMode;
 
 public final class ThemeHelper {
     private ThemeHelper() {
@@ -82,6 +83,10 @@ public final class ThemeHelper {
      * @return whether the light theme is selected
      */
     public static boolean isLightThemeSelected(final Context context) {
+        if (RokidMode.enabled()) {
+            return false;
+        }
+
         final String selectedThemeKey = getSelectedThemeKey(context);
         final Resources res = context.getResources();
 
@@ -123,6 +128,10 @@ public final class ThemeHelper {
      */
     @StyleRes
     public static int getThemeForService(final Context context, final int serviceId) {
+        if (RokidMode.enabled()) {
+            return R.style.BlackTheme;
+        }
+
         final Resources res = context.getResources();
         final String lightThemeKey = res.getString(R.string.light_theme_key);
         final String blackThemeKey = res.getString(R.string.black_theme_key);
@@ -181,6 +190,10 @@ public final class ThemeHelper {
 
     @StyleRes
     public static int getSettingsThemeStyle(final Context context) {
+        if (RokidMode.enabled()) {
+            return R.style.BlackSettingsTheme;
+        }
+
         final Resources res = context.getResources();
         final String lightTheme = res.getString(R.string.light_theme_key);
         final String blackTheme = res.getString(R.string.black_theme_key);

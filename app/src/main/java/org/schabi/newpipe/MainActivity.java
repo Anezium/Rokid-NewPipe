@@ -81,6 +81,9 @@ import org.schabi.newpipe.player.Player;
 import org.schabi.newpipe.player.event.OnKeyDownListener;
 import org.schabi.newpipe.player.helper.PlayerHolder;
 import org.schabi.newpipe.player.playqueue.PlayQueue;
+import org.schabi.newpipe.rokid.RokidFocusNavigator;
+import org.schabi.newpipe.rokid.RokidKeyboardController;
+import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.settings.UpdateSettingsFragment;
 import org.schabi.newpipe.settings.migration.MigrationManager;
 import org.schabi.newpipe.util.Constants;
@@ -578,6 +581,27 @@ public class MainActivity extends AppCompatActivity {
         super.onNewIntent(intent);
         setIntent(intent);
         handleIntent(intent);
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(final KeyEvent event) {
+        if (RokidMode.enabled() && event.getAction() == KeyEvent.ACTION_DOWN) {
+            if (RokidKeyboardController.forActivity(this).handleKeyEvent(event)) {
+                return true;
+            }
+
+            final Fragment fragment = getSupportFragmentManager()
+                    .findFragmentById(R.id.fragment_player_holder);
+            if (fragment instanceof OnKeyDownListener && !bottomSheetHiddenOrCollapsed()
+                    && ((OnKeyDownListener) fragment).onKeyDown(event.getKeyCode())) {
+                return true;
+            }
+
+            if (RokidFocusNavigator.handle(this, event)) {
+                return true;
+            }
+        }
+        return super.dispatchKeyEvent(event);
     }
 
     @Override

@@ -78,6 +78,8 @@ import org.schabi.newpipe.player.playqueue.PlayQueue;
 import org.schabi.newpipe.player.playqueue.PlayQueueItem;
 import org.schabi.newpipe.player.seekbarpreview.SeekbarPreviewThumbnailHelper;
 import org.schabi.newpipe.player.seekbarpreview.SeekbarPreviewThumbnailHolder;
+import org.schabi.newpipe.rokid.RokidKeyMapper;
+import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.util.DeviceUtils;
 import org.schabi.newpipe.util.Localization;
 import org.schabi.newpipe.util.NavigationHelper;
@@ -190,6 +192,10 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
 
         binding.titleTextView.setSelected(true);
         binding.channelTextView.setSelected(true);
+        if (RokidMode.enabled()) {
+            updateRokidSeekRailText();
+            binding.rokidSeekRail.setVisibility(View.VISIBLE);
+        }
 
         // Prevent hiding of bottom sheet via swipe inside queue
         binding.itemsList.setNestedScrollingEnabled(false);
@@ -1478,6 +1484,10 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
     }
 
     public boolean onKeyDown(final int keyCode) {
+        if (RokidMode.enabled() && onRokidKeyDown(keyCode)) {
+            return true;
+        }
+
         switch (keyCode) {
             case KeyEvent.KEYCODE_BACK:
                 if (DeviceUtils.isTv(context) && isControlsVisible()) {
@@ -1514,6 +1524,71 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
         }
 
         return false;
+    }
+
+    private boolean onRokidKeyDown(final int keyCode) {
+        final RokidKeyMapper.Action action = RokidKeyMapper.map(keyCode);
+        switch (action) {
+            case DUPLICATE:
+                return true;
+            case PREVIOUS:
+                return seekFromRokidKey(false);
+            case NEXT:
+                return seekFromRokidKey(true);
+            case SELECT:
+                return selectFromRokidKey();
+            case BACK:
+                if (isControlsVisible()) {
+                    hideControls(0, 0);
+                    return true;
+                }
+                return false;
+            default:
+                return false;
+        }
+    }
+
+    private boolean seekFromRokidKey(final boolean forward) {
+        if (player.exoPlayerIsNull()
+                || player.getCurrentState() == org.schabi.newpipe.player.Player.STATE_BLOCKED) {
+            return true;
+        }
+        if (forward) {
+            player.fastForward();
+        } else {
+            player.fastRewind();
+        }
+        updateRokidSeekRailText();
+        binding.playbackSeekBar.requestFocus();
+        showControls(0);
+        hideControls(DEFAULT_CONTROLS_DURATION, DPAD_CONTROLS_HIDE_TIME);
+        return true;
+    }
+
+    private boolean selectFromRokidKey() {
+        if (!isControlsVisible()) {
+            binding.playPauseButton.requestFocus();
+            showControlsThenHide();
+            showSystemUIPartially();
+            return true;
+        }
+
+        final View focused = binding.getRoot().findFocus();
+        if (focused != null && focused.isShown() && focused.isEnabled() && focused.isClickable()) {
+            focused.performClick();
+        } else {
+            player.playPause();
+        }
+        return true;
+    }
+
+    private void updateRokidSeekRailText() {
+        if (!RokidMode.enabled() || binding.rokidSeekBack == null) {
+            return;
+        }
+        final long seconds = retrieveSeekDurationFromPreferences(player) / 1000;
+        binding.rokidSeekBack.setText(context.getString(R.string.rokid_seek_backward, seconds));
+        binding.rokidSeekForward.setText(context.getString(R.string.rokid_seek_forward, seconds));
     }
 
     private void onMoreOptionsClicked() {

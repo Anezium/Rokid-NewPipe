@@ -72,6 +72,11 @@
 
     <!-- Black Theme -->
     <style name="Base.V21.BlackTheme" parent="DarkTheme">
+        <item name="colorPrimary">@color/black_background_color</item>
+        <item name="colorPrimaryDark">@color/black_background_color</item>
+        <item name="colorAccent">@color/white</item>
+        <item name="colorControlActivated">@color/white</item>
+        <item name="colorControlHighlight">@color/selected_background_color</item>
         <item name="android:windowBackground">@color/black_background_color</item>
         <item name="windowBackground">@color/black_background_color</item>
 

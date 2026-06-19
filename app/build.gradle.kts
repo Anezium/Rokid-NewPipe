@@ -18,14 +18,7 @@ plugins {
     checkstyle
 }
 
-val gitWorkingBranch = providers.exec {
-    commandLine("git", "rev-parse", "--abbrev-ref", "HEAD")
-}.standardOutput.asText.map { it.trim() }
-val defaultBranches = listOf("master", "dev")
-val workingBranch = gitWorkingBranch.getOrElse("")
-val normalizedWorkingBranch = workingBranch
-    .replaceFirst("^[^A-Za-z]+".toRegex(), "")
-    .replace("[^0-9A-Za-z]+".toRegex(), "")
+val rokidGlassMode = providers.gradleProperty("rokidGlassMode").orElse("true")
 
 kotlin {
     jvmToolchain(21)
@@ -46,8 +39,9 @@ configure<ApplicationExtension> {
     namespace = NEWPIPE_APPLICATION_ID_OLD
 
     defaultConfig {
-        applicationId = NEWPIPE_APPLICATION_ID_OLD
-        resValue("string", "app_name", "NewPipe")
+        applicationId = "com.anezium.rokid.newpipe"
+        resValue("string", "app_name", "Rokid NewPipe")
+        buildConfigField("boolean", "ROKID_GLASS_MODE", rokidGlassMode.get())
         minSdk {
             version = release(NEWPIPE_VERSION_SDK_MIN)
         }
@@ -66,15 +60,7 @@ configure<ApplicationExtension> {
     buildTypes {
         debug {
             isDebuggable = true
-
-            // suffix the app id and the app name with git branch name
-            if (normalizedWorkingBranch.isEmpty() || workingBranch in defaultBranches) {
-                applicationIdSuffix = ".debug"
-                resValue("string", "app_name", "NewPipe Debug")
-            } else {
-                applicationIdSuffix = ".debug.$normalizedWorkingBranch"
-                resValue("string", "app_name", "NewPipe $workingBranch")
-            }
+            resValue("string", "app_name", "Rokid NewPipe Debug")
         }
 
         release {
@@ -94,15 +80,7 @@ configure<ApplicationExtension> {
             initWith(getByName("release"))
             signingConfig = signingConfigs.getByName("debug")
             isDefault = true
-
-            // suffix the app id and the app name with git branch name
-            if (normalizedWorkingBranch.isEmpty() || workingBranch in defaultBranches) {
-                applicationIdSuffix = ".continuous"
-                resValue("string", "app_name", "NewPipe Continuous")
-            } else {
-                applicationIdSuffix = ".continuous.$normalizedWorkingBranch"
-                resValue("string", "app_name", "NewPipe $workingBranch")
-            }
+            resValue("string", "app_name", "Rokid NewPipe Continuous")
         }
     }
 

@@ -64,6 +64,8 @@ import org.schabi.newpipe.fragments.list.BaseListFragment;
 import org.schabi.newpipe.ktx.AnimationType;
 import org.schabi.newpipe.ktx.ExceptionUtils;
 import org.schabi.newpipe.local.history.HistoryRecordManager;
+import org.schabi.newpipe.rokid.RokidKeyboardController;
+import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.settings.NewPipeSettings;
 import org.schabi.newpipe.util.Constants;
 import org.schabi.newpipe.util.DeviceUtils;
@@ -557,7 +559,7 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
             if ((showLocalSuggestions || showRemoteSuggestions) && !isErrorPanelVisible()) {
                 showSuggestionsPanel();
             }
-            if (DeviceUtils.isTv(getContext())) {
+            if (RokidMode.enabled() || DeviceUtils.isTv(getContext())) {
                 showKeyboardSearch();
             }
         });
@@ -683,6 +685,13 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
         if (DEBUG) {
             Log.d(TAG, "showKeyboardSearch() called");
         }
+        if (RokidMode.enabled()) {
+            RokidKeyboardController.forActivity(activity).show(searchEditText, () -> {
+                searchEditText.setText(getSearchEditString().trim());
+                search(getSearchEditString(), new String[0], "");
+            });
+            return;
+        }
         KeyboardUtil.showKeyboard(activity, searchEditText);
     }
 
@@ -691,6 +700,10 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
             Log.d(TAG, "hideKeyboardSearch() called");
         }
 
+        if (RokidMode.enabled()) {
+            RokidKeyboardController.forActivity(activity).hide(searchEditText);
+            return;
+        }
         KeyboardUtil.hideKeyboard(activity, searchEditText);
     }
 
