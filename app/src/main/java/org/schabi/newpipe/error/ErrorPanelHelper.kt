@@ -2,6 +2,9 @@ package org.schabi.newpipe.error
 
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.provider.Settings
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
@@ -15,6 +18,7 @@ import java.util.concurrent.TimeUnit
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.R
 import org.schabi.newpipe.ktx.animate
+import org.schabi.newpipe.rokid.RokidMode
 import org.schabi.newpipe.util.external_communication.ShareUtils
 import org.schabi.newpipe.util.text.setTextWithLinks
 
@@ -38,6 +42,8 @@ class ErrorPanelHelper(
         errorPanelRoot.findViewById(R.id.error_action_button)
     private val errorRetryButton: Button =
         errorPanelRoot.findViewById(R.id.error_retry_button)
+    private val errorWifiSettingsButton: Button =
+        errorPanelRoot.findViewById(R.id.error_wifi_settings_button)
     private val errorOpenInBrowserButton: Button =
         errorPanelRoot.findViewById(R.id.error_open_in_browser)
 
@@ -60,6 +66,7 @@ class ErrorPanelHelper(
         errorServiceExplanationTextView.isVisible = false
         errorActionButton.isVisible = false
         errorRetryButton.isVisible = false
+        errorWifiSettingsButton.isVisible = false
         errorOpenInBrowserButton.isVisible = false
     }
 
@@ -83,6 +90,11 @@ class ErrorPanelHelper(
 
         if (errorInfo.isRetryable) {
             errorRetryButton.isVisible = retryShouldBeShown
+        }
+
+        if (RokidMode.enabled() && !hasInternetNetwork()) {
+            errorWifiSettingsButton.isVisible = true
+            errorWifiSettingsButton.setOnClickListener { openWifiSettings() }
         }
 
         if (errorInfo.openInBrowserUrl != null) {
@@ -121,6 +133,7 @@ class ErrorPanelHelper(
 
     fun hide() {
         errorActionButton.setOnClickListener(null)
+        errorWifiSettingsButton.setOnClickListener(null)
         errorPanelRoot.animate(false, 150)
     }
 
@@ -131,7 +144,28 @@ class ErrorPanelHelper(
     fun dispose() {
         errorActionButton.setOnClickListener(null)
         errorRetryButton.setOnClickListener(null)
+        errorWifiSettingsButton.setOnClickListener(null)
         errorDisposable?.dispose()
+    }
+
+    private fun hasInternetNetwork(): Boolean {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE)
+            as? ConnectivityManager ?: return false
+        val network = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    private fun openWifiSettings() {
+        val wifiIntent = Intent(Settings.ACTION_WIFI_SETTINGS)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val fallbackIntent = Intent(Settings.ACTION_SETTINGS)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            context.startActivity(wifiIntent)
+        } catch (ignored: Exception) {
+            context.startActivity(fallbackIntent)
+        }
     }
 
     companion object {
