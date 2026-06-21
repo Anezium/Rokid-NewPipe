@@ -32,6 +32,8 @@ import org.schabi.newpipe.extractor.localization.ContentCountry;
 import org.schabi.newpipe.extractor.services.media_ccc.extractors.MediaCCCLiveStreamKiosk;
 import org.schabi.newpipe.extractor.stream.StreamInfoItem;
 import org.schabi.newpipe.fragments.list.BaseListInfoFragment;
+import org.schabi.newpipe.rokid.RokidKioskNavigator;
+import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.util.ExtractorHelper;
 import org.schabi.newpipe.util.KioskTranslator;
 import org.schabi.newpipe.util.Localization;
@@ -103,6 +105,41 @@ public class KioskFragment extends BaseListInfoFragment<StreamInfoItem, KioskInf
                              @Nullable final ViewGroup container,
                              @Nullable final Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_kiosk, container, false);
+    }
+
+    @Override
+    protected void initViews(final View rootView, final Bundle savedInstanceState) {
+        super.initViews(rootView, savedInstanceState);
+        setupRokidSectionNav(rootView);
+    }
+
+    private void setupRokidSectionNav(@NonNull final View rootView) {
+        if (!RokidMode.enabled() || useAsFrontPage) {
+            return;
+        }
+
+        final View nav = rootView.findViewById(R.id.rokid_section_nav);
+        final View videos = rootView.findViewById(R.id.rokid_section_videos_button);
+        final View live = rootView.findViewById(R.id.rokid_section_live_button);
+        nav.setVisibility(View.VISIBLE);
+        videos.setOnClickListener(v -> openRokidSection(false));
+        live.setOnClickListener(v -> openRokidSection(true));
+
+        final boolean liveSelected = "live".equals(kioskId);
+        final View selected = liveSelected ? live : videos;
+        selected.post(() -> {
+            selected.requestFocusFromTouch();
+            selected.requestFocus();
+        });
+    }
+
+    private void openRokidSection(final boolean live) {
+        try {
+            RokidKioskNavigator.open(this, live);
+        } catch (final Exception e) {
+            showSnackBarError(new ErrorInfo(e, UserAction.UI_ERROR,
+                    live ? "Opening live" : "Opening videos"));
+        }
     }
 
     /*//////////////////////////////////////////////////////////////////////////

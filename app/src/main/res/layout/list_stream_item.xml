@@ -5,15 +5,17 @@
     android:id="@+id/itemRoot"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?attr/selectableItemBackground"
+    android:background="@drawable/rokid_list_item_background"
     android:clickable="true"
     android:focusable="true"
+    android:minHeight="@dimen/video_item_search_height"
     android:padding="@dimen/video_item_search_padding">
 
     <ImageView
         android:id="@+id/itemThumbnailView"
         android:layout_width="@dimen/video_item_search_thumbnail_image_width"
         android:layout_height="@dimen/video_item_search_thumbnail_image_height"
+        android:background="@android:color/black"
         android:scaleType="fitCenter"
         android:src="@drawable/placeholder_thumbnail_video"
         app:layout_constraintBottom_toTopOf="@+id/itemProgressView"
@@ -46,6 +48,7 @@
         android:maxLines="2"
         android:textAppearance="?android:attr/textAppearanceLarge"
         android:textColor="?android:attr/textColorPrimary"
+        android:textStyle="bold"
         android:textSize="@dimen/video_item_search_title_text_size"
         app:layout_constraintBottom_toTopOf="@+id/itemUploaderView"
         app:layout_constraintEnd_toEndOf="parent"

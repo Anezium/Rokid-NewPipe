@@ -106,6 +106,7 @@ import org.schabi.newpipe.player.playqueue.PlayQueueItem;
 import org.schabi.newpipe.player.playqueue.SinglePlayQueue;
 import org.schabi.newpipe.player.ui.MainPlayerUi;
 import org.schabi.newpipe.player.ui.VideoPlayerUi;
+import org.schabi.newpipe.rokid.RokidKeyboardController;
 import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.util.Constants;
 import org.schabi.newpipe.util.DeviceUtils;
@@ -664,6 +665,7 @@ public final class VideoDetailFragment
 
         setOnClickListeners();
         setOnLongClickListeners();
+        applyRokidDetailDefaults();
 
         final View.OnTouchListener controlsTouchListener = (view, motionEvent) -> {
             if (motionEvent.getAction() == MotionEvent.ACTION_DOWN
@@ -1051,17 +1053,45 @@ public final class VideoDetailFragment
         if (!RokidMode.enabled() || binding == null) {
             return;
         }
+        RokidKeyboardController.hideAll(activity);
+
+        binding.getRoot().setBackgroundColor(Color.BLACK);
+        binding.detailMainContent.setBackgroundColor(Color.BLACK);
+        binding.detailContentRootLayout.setBackgroundColor(Color.BLACK);
+        binding.detailContentRootHiding.setBackgroundColor(Color.BLACK);
+        binding.detailThumbnailRootLayout.setBackgroundColor(Color.BLACK);
 
         binding.detailControlPanel.setVisibility(View.GONE);
         binding.detailSecondaryControlPanel.setVisibility(View.GONE);
         binding.detailToggleSecondaryControlsView.setVisibility(View.GONE);
         binding.detailMetaInfoSeparator.setVisibility(View.GONE);
+        binding.detailMetaInfoTextView.setVisibility(View.GONE);
+        binding.detailsPanel.setVisibility(View.GONE);
+        binding.detailSubChannelThumbnailView.setVisibility(View.GONE);
+        binding.detailUploaderThumbnailView.setVisibility(View.GONE);
+        binding.detailTitleRootLayout.setClickable(false);
+        binding.detailTitleRootLayout.setFocusable(false);
+        binding.detailUploaderRootLayout.setClickable(false);
+        binding.detailUploaderRootLayout.setFocusable(false);
+        binding.detailVideoTitleView.setMaxLines(2);
+        binding.detailVideoTitleView.setTextColor(Color.WHITE);
+        binding.detailUploaderTextView.setTextColor(
+                ContextCompat.getColor(requireContext(), R.color.white_secondary));
+        binding.detailSubChannelTextView.setTextColor(Color.WHITE);
+        binding.viewPager.setVisibility(View.GONE);
+        binding.tabLayout.setVisibility(View.GONE);
     }
 
     public void updateTabLayoutVisibility() {
 
         if (binding == null) {
             //If binding is null we do not need to and should not do anything with its object(s)
+            return;
+        }
+
+        if (RokidMode.enabled()) {
+            binding.tabLayout.setVisibility(View.GONE);
+            binding.viewPager.setVisibility(View.GONE);
             return;
         }
 
@@ -1573,7 +1603,7 @@ public final class VideoDetailFragment
         binding.positionView.setVisibility(View.GONE);
 
         binding.detailVideoTitleView.setText(title);
-        binding.detailVideoTitleView.setMaxLines(1);
+        binding.detailVideoTitleView.setMaxLines(RokidMode.enabled() ? 2 : 1);
         animate(binding.detailVideoTitleView, true, 0);
 
         binding.detailToggleSecondaryControlsView.setVisibility(View.GONE);
@@ -1719,6 +1749,7 @@ public final class VideoDetailFragment
         binding.detailControlsPopup.setVisibility(noVideoStreams ? View.GONE : View.VISIBLE);
         binding.detailThumbnailPlayButton.setImageResource(
                 noVideoStreams ? R.drawable.ic_headset_shadow : R.drawable.ic_play_arrow_shadow);
+        applyRokidDetailDefaults();
     }
 
     private void displayUploaderAsSubChannel(final StreamInfo info) {

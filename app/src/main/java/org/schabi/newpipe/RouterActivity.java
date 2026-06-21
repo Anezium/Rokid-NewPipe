@@ -70,6 +70,7 @@ import org.schabi.newpipe.player.playqueue.ChannelTabPlayQueue;
 import org.schabi.newpipe.player.playqueue.PlayQueue;
 import org.schabi.newpipe.player.playqueue.PlaylistPlayQueue;
 import org.schabi.newpipe.player.playqueue.SinglePlayQueue;
+import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.util.ChannelTabHelper;
 import org.schabi.newpipe.util.Constants;
 import org.schabi.newpipe.util.DeviceUtils;
@@ -303,6 +304,13 @@ public class RouterActivity extends AppCompatActivity {
                 getChoicesForService(currentService, currentLinkType),
                 preferences.getString(getString(R.string.preferred_open_action_key),
                         getString(R.string.preferred_open_action_default)));
+
+        if (RokidMode.enabled()
+                && choiceChecker.getAvailableChoices().stream()
+                .anyMatch(item -> getString(R.string.show_info_key).equals(item.key))) {
+            handleChoice(getString(R.string.show_info_key));
+            return;
+        }
 
         // Check for non-player related choices
         if (choiceChecker.isAvailableAndSelected(

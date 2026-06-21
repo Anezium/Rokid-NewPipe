@@ -863,6 +863,8 @@
     <string name="rokid_seek_backward_static">-10s</string>
     <string name="rokid_seek_forward_static">+10s</string>
     <string name="rokid_wifi_settings">Wi-Fi</string>
+    <string name="rokid_home_videos" translatable="false">Videos</string>
+    <string name="rokid_home_live" translatable="false">Live</string>
     <string name="rokid_player_actions" translatable="false">Player actions</string>
     <string name="rokid_player_play" translatable="false">Play</string>
     <string name="rokid_player_pause" translatable="false">Pause</string>

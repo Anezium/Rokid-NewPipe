@@ -18,6 +18,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
+import org.schabi.newpipe.R;
+
 import java.lang.ref.WeakReference;
 import java.util.WeakHashMap;
 
@@ -64,6 +66,30 @@ public final class RokidKeyboardController {
         return controller;
     }
 
+    public static void hideAll() {
+        for (final RokidKeyboardController controller
+                : new java.util.ArrayList<>(INSTANCES.values())) {
+            controller.hide(null);
+        }
+    }
+
+    public static void hideAll(@Nullable final Activity activity) {
+        hideAll();
+        if (activity == null) {
+            return;
+        }
+
+        View overlayView = activity.findViewById(R.id.rokidKeyboardOverlay);
+        while (overlayView != null) {
+            final ViewGroup parent = (ViewGroup) overlayView.getParent();
+            if (parent == null) {
+                break;
+            }
+            parent.removeView(overlayView);
+            overlayView = activity.findViewById(R.id.rokidKeyboardOverlay);
+        }
+    }
+
     public boolean isVisible() {
         return overlay != null && overlay.getVisibility() == View.VISIBLE;
     }
@@ -74,6 +100,10 @@ public final class RokidKeyboardController {
             return;
         }
         ensureOverlay(activity);
+        if (target != editText) {
+            keys = LETTER_KEYS;
+            selectedIndex = 0;
+        }
         target = editText;
         enterAction = onEnter;
         selectedIndex = Math.min(selectedIndex, keys.length - 1);
@@ -88,11 +118,18 @@ public final class RokidKeyboardController {
             return;
         }
         if (overlay != null) {
-            overlay.setVisibility(View.GONE);
+            final ViewGroup parent = (ViewGroup) overlay.getParent();
+            if (parent != null) {
+                parent.removeView(overlay);
+            }
+            overlay = null;
         }
         if (target != null) {
             target.clearFocus();
         }
+        preview = null;
+        selectedKey = null;
+        strip = null;
         target = null;
         enterAction = null;
     }
@@ -128,6 +165,7 @@ public final class RokidKeyboardController {
         }
 
         overlay = new FrameLayout(activity);
+        overlay.setId(R.id.rokidKeyboardOverlay);
         overlay.setVisibility(View.GONE);
         overlay.setFocusable(true);
         overlay.setFocusableInTouchMode(true);

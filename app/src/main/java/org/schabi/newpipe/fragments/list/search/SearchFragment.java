@@ -317,6 +317,7 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
         if (DEBUG) {
             Log.d(TAG, "onDestroyView() called");
         }
+        hideKeyboardSearch();
         unsetSearchListeners();
 
         searchBinding = null;
@@ -383,6 +384,18 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
         searchToolbarContainer = activity.findViewById(R.id.toolbar_search_container);
         searchEditText = searchToolbarContainer.findViewById(R.id.toolbar_search_edit_text);
         searchClear = searchToolbarContainer.findViewById(R.id.toolbar_search_clear);
+        applyRokidSearchDefaults();
+    }
+
+    private void applyRokidSearchDefaults() {
+        if (!RokidMode.enabled()) {
+            return;
+        }
+        searchBinding.suggestionsPanel.setVisibility(View.GONE);
+        searchBinding.suggestionsList.setVerticalScrollBarEnabled(false);
+        searchBinding.itemsList.setVerticalScrollBarEnabled(false);
+        searchBinding.itemsList.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        searchEditText.setSingleLine(true);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -667,6 +680,11 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
         if (DEBUG) {
             Log.d(TAG, "showSuggestionsPanel() called");
         }
+        if (RokidMode.enabled()) {
+            suggestionsPanelVisible = false;
+            searchBinding.suggestionsPanel.setVisibility(View.GONE);
+            return;
+        }
         suggestionsPanelVisible = true;
         animate(searchBinding.suggestionsPanel, true, 200,
                 AnimationType.LIGHT_SLIDE_AND_ALPHA);
@@ -686,6 +704,10 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
             Log.d(TAG, "showKeyboardSearch() called");
         }
         if (RokidMode.enabled()) {
+            if (!isRokidSearchVisible()) {
+                RokidKeyboardController.hideAll(activity);
+                return;
+            }
             RokidKeyboardController.forActivity(activity).show(searchEditText, () -> {
                 searchEditText.setText(getSearchEditString().trim());
                 search(getSearchEditString(), new String[0], "");
@@ -705,6 +727,14 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
             return;
         }
         KeyboardUtil.hideKeyboard(activity, searchEditText);
+    }
+
+    private boolean isRokidSearchVisible() {
+        if (!RokidMode.enabled() || activity == null || searchBinding == null
+                || searchToolbarContainer == null) {
+            return false;
+        }
+        return searchBinding.getRoot().isShown() && searchToolbarContainer.isShown();
     }
 
     private void showDeleteSuggestionDialog(final SuggestionItem item) {
@@ -1156,6 +1186,9 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
     //////////////////////////////////////////////////////////////////////////*/
 
     public int getSuggestionMovementFlags(@NonNull final RecyclerView.ViewHolder viewHolder) {
+        if (RokidMode.enabled()) {
+            return 0;
+        }
         final int position = viewHolder.getBindingAdapterPosition();
         if (position == RecyclerView.NO_POSITION) {
             return 0;

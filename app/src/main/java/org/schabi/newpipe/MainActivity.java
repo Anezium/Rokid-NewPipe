@@ -85,6 +85,7 @@ import org.schabi.newpipe.player.event.OnKeyDownListener;
 import org.schabi.newpipe.player.helper.PlayerHolder;
 import org.schabi.newpipe.player.playqueue.PlayQueue;
 import org.schabi.newpipe.rokid.RokidFocusNavigator;
+import org.schabi.newpipe.rokid.RokidKeyMapper;
 import org.schabi.newpipe.rokid.RokidKeyboardController;
 import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.settings.UpdateSettingsFragment;
@@ -607,6 +608,10 @@ public class MainActivity extends AppCompatActivity {
             if (RokidKeyboardController.forActivity(this).handleKeyEvent(event)) {
                 return true;
             }
+            if (event.getRepeatCount() > 0
+                    && RokidKeyMapper.isDirectionalKey(event.getKeyCode())) {
+                return true;
+            }
 
             if (dispatchToOnKeyDownListeners(getSupportFragmentManager(), event.getKeyCode())) {
                 return true;
@@ -640,6 +645,9 @@ public class MainActivity extends AppCompatActivity {
             if (fragment == null || !fragment.isVisible()) {
                 continue;
             }
+            if (shouldSkipRokidForegroundDetail(fragment)) {
+                continue;
+            }
             if (shouldSkipRokidPlayerFragment(fragment)) {
                 continue;
             }
@@ -652,6 +660,13 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return false;
+    }
+
+    private boolean shouldSkipRokidForegroundDetail(@NonNull final Fragment fragment) {
+        return RokidMode.enabled()
+                && bottomSheetHiddenOrCollapsed()
+                && fragment.getId() == R.id.fragment_holder
+                && fragment instanceof VideoDetailFragment;
     }
 
     private boolean shouldSkipRokidPlayerFragment(@NonNull final Fragment fragment) {
@@ -890,6 +905,9 @@ public class MainActivity extends AppCompatActivity {
         try {
             if (DEBUG) {
                 Log.d(TAG, "handleIntent() called with: intent = [" + intent + "]");
+            }
+            if (RokidMode.enabled()) {
+                RokidKeyboardController.hideAll(this);
             }
 
             if (intent.hasExtra(Constants.KEY_LINK_TYPE)) {

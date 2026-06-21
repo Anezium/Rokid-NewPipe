@@ -28,6 +28,7 @@ import org.schabi.newpipe.fragments.OnScrollBelowItemsListener;
 import org.schabi.newpipe.info_list.InfoListAdapter;
 import org.schabi.newpipe.info_list.ItemViewMode;
 import org.schabi.newpipe.info_list.dialog.InfoItemDialog;
+import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.util.NavigationHelper;
 import org.schabi.newpipe.util.OnClickGesture;
 import org.schabi.newpipe.util.StateSaver;
@@ -234,6 +235,10 @@ public abstract class BaseListFragment<I, N> extends BaseStateFragment<I>
         super.initViews(rootView, savedInstanceState);
 
         itemsList = rootView.findViewById(R.id.items_list);
+        if (RokidMode.enabled()) {
+            itemsList.setVerticalScrollBarEnabled(false);
+            itemsList.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        }
         refreshItemViewMode();
 
         final Supplier<View> listHeaderSupplier = getListHeaderSupplier();
@@ -484,6 +489,9 @@ public abstract class BaseListFragment<I, N> extends BaseStateFragment<I>
      * @return ItemViewMode
      */
     protected ItemViewMode getItemViewMode() {
+        if (RokidMode.enabled()) {
+            return ItemViewMode.LIST;
+        }
         return ThemeHelper.getItemViewMode(requireContext());
     }
 }

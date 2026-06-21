@@ -97,7 +97,7 @@ class ErrorPanelHelper(
             errorWifiSettingsButton.setOnClickListener { openWifiSettings() }
         }
 
-        if (errorInfo.openInBrowserUrl != null) {
+        if (!RokidMode.enabled() && errorInfo.openInBrowserUrl != null) {
             errorOpenInBrowserButton.isVisible = true
             errorOpenInBrowserButton.setOnClickListener {
                 ShareUtils.openUrlInBrowser(context, errorInfo.openInBrowserUrl)

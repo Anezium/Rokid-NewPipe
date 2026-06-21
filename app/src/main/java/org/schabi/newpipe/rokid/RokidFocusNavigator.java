@@ -53,8 +53,14 @@ public final class RokidFocusNavigator {
         ROKID_RAIL_INDICES.remove(activity);
         switch (action) {
             case PREVIOUS:
+                if (focusSearchFromRokidHome(activity, root, current)) {
+                    return true;
+                }
                 return moveFocus(activity, root, current, View.FOCUS_BACKWARD);
             case NEXT:
+                if (moveErrorPanelFocus(activity, root, current)) {
+                    return true;
+                }
                 return moveFocus(activity, root, current, View.FOCUS_FORWARD);
             case SELECT:
                 if (clickCurrent(activity, current)) {
@@ -220,6 +226,81 @@ public final class RokidFocusNavigator {
         LAST_TARGETS.put(activity, target);
         rememberRecyclerTarget(activity, target);
         return focused || target.isFocused();
+    }
+
+    private static boolean focusSearchFromRokidHome(
+            final Activity activity,
+            final View root,
+            final View current
+    ) {
+        if (root == null || !isViewWithIdShown(root, R.id.toolbar_layout)) {
+            return false;
+        }
+
+        final boolean errorPanelVisible = isViewWithIdShown(root, R.id.error_panel);
+        if (!errorPanelVisible && current != null && current.isShown()) {
+            return false;
+        }
+
+        final View searchAction = findVisibleViewById(root, R.id.action_search);
+        if (searchAction == null || !searchAction.isShown() || !searchAction.isEnabled()) {
+            return false;
+        }
+
+        final boolean focused = requestRokidFocus(searchAction);
+        applySelected(collectErrorPanelTargets(root), -1);
+        LAST_TARGETS.put(activity, searchAction);
+        return focused || searchAction.isFocused();
+    }
+
+    private static boolean moveErrorPanelFocus(
+            final Activity activity,
+            final View root,
+            final View current
+    ) {
+        if (root == null || !isViewWithIdShown(root, R.id.error_panel)) {
+            return false;
+        }
+
+        final ArrayList<View> actions = collectErrorPanelTargets(root);
+        if (actions.isEmpty()) {
+            return false;
+        }
+
+        int currentIndex = findCurrentIndex(current, actions);
+        if (currentIndex < 0 && (current == null || !current.isShown())) {
+            currentIndex = findCurrentIndex(LAST_TARGETS.get(activity), actions);
+        }
+
+        final int targetIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % actions.size();
+        final View target = actions.get(targetIndex);
+        final boolean focused = requestRokidFocus(target);
+        applySelected(actions, targetIndex);
+        LAST_TARGETS.put(activity, target);
+        return focused || target.isFocused();
+    }
+
+    private static ArrayList<View> collectErrorPanelTargets(final View root) {
+        final int[] ids = {
+                R.id.error_action_button,
+                R.id.error_retry_button,
+                R.id.error_wifi_settings_button,
+                R.id.error_open_in_browser
+        };
+        final ArrayList<View> actions = new ArrayList<>();
+        for (final int id : ids) {
+            final View target = findVisibleViewById(root, id);
+            if (target != null && target.isShown() && target.isEnabled() && target.isClickable()) {
+                actions.add(target);
+            }
+        }
+        return actions;
+    }
+
+    private static void applySelected(final ArrayList<View> actions, final int selectedIndex) {
+        for (int i = 0; i < actions.size(); i++) {
+            actions.get(i).setSelected(i == selectedIndex);
+        }
     }
 
     private static boolean tryMoveWithinRecyclerView(

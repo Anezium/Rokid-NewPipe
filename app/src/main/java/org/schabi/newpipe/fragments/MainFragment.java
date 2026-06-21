@@ -40,6 +40,8 @@ import org.schabi.newpipe.error.ErrorInfo;
 import org.schabi.newpipe.error.ErrorUtil;
 import org.schabi.newpipe.error.UserAction;
 import org.schabi.newpipe.local.playlist.LocalPlaylistFragment;
+import org.schabi.newpipe.rokid.RokidKioskNavigator;
+import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.settings.tabs.Tab;
 import org.schabi.newpipe.settings.tabs.TabsManager;
 import org.schabi.newpipe.util.NavigationHelper;
@@ -111,6 +113,10 @@ public class MainFragment extends BaseFragment implements TabLayout.OnTabSelecte
 
         setupTabs();
         updateTabLayoutPosition();
+        if (RokidMode.enabled()) {
+            binding.mainTabLayout.setVisibility(View.GONE);
+            setupRokidHomeNav();
+        }
     }
 
     @Override
@@ -227,6 +233,18 @@ public class MainFragment extends BaseFragment implements TabLayout.OnTabSelecte
     private void updateTabLayoutPosition() {
         final ScrollableTabLayout tabLayout = binding.mainTabLayout;
         final ViewPager viewPager = binding.pager;
+        if (RokidMode.enabled()) {
+            binding.rokidHomeNav.setVisibility(View.VISIBLE);
+            tabLayout.setVisibility(View.GONE);
+            final var pagerParams = (RelativeLayout.LayoutParams) viewPager.getLayoutParams();
+            pagerParams.removeRule(BELOW);
+            pagerParams.removeRule(ABOVE);
+            pagerParams.removeRule(ALIGN_PARENT_TOP);
+            pagerParams.addRule(BELOW, R.id.rokid_home_nav);
+            viewPager.setLayoutParams(pagerParams);
+            return;
+        }
+        binding.rokidHomeNav.setVisibility(View.GONE);
         final boolean bottom = mainTabsPositionBottom;
 
         // change layout params to make the tab layout appear either at the top or at the bottom
@@ -254,6 +272,19 @@ public class MainFragment extends BaseFragment implements TabLayout.OnTabSelecte
         tabLayout.setTabRippleColor(ColorStateList.valueOf(iconColor).withAlpha(32));
         tabLayout.setTabIconTint(ColorStateList.valueOf(iconColor));
         tabLayout.setSelectedTabIndicatorColor(iconColor);
+    }
+
+    private void setupRokidHomeNav() {
+        binding.rokidHomeVideosButton.setOnClickListener(v -> openRokidKiosk(false));
+        binding.rokidHomeLiveButton.setOnClickListener(v -> openRokidKiosk(true));
+    }
+
+    private void openRokidKiosk(final boolean live) {
+        try {
+            RokidKioskNavigator.open(this, live);
+        } catch (final Exception e) {
+            ErrorUtil.showUiErrorSnackbar(this, live ? "Opening live" : "Opening videos", e);
+        }
     }
 
     @Override
