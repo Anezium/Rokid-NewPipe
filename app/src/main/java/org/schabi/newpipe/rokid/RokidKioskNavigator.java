@@ -39,26 +39,40 @@ public final class RokidKioskNavigator {
             return kiosks.contains("live") ? "live" : null;
         }
 
+        return findVideoKiosk(kiosks);
+    }
+
+    @Nullable
+    static String findVideoKioskForTesting(@NonNull final Set<String> kiosks) {
+        return findVideoKiosk(kiosks);
+    }
+
+    @Nullable
+    private static String findVideoKiosk(@NonNull final Set<String> kiosks) {
         final String[] preferredVideoKiosks = {
-                "trending_music",
                 "trending_gaming",
                 "trending_movies_and_shows",
-                "trending_podcasts_episodes",
                 "New & hot",
-                "Top 50",
                 "Recently added",
+                "Top 50",
                 "Trending"
         };
         for (final String kioskId : preferredVideoKiosks) {
-            if (kiosks.contains(kioskId) && !"live".equals(kioskId)) {
+            if (kiosks.contains(kioskId) && isVideoKiosk(kioskId)) {
                 return kioskId;
             }
         }
         for (final String kioskId : kiosks) {
-            if (!"live".equals(kioskId)) {
+            if (isVideoKiosk(kioskId)) {
                 return kioskId;
             }
         }
         return null;
+    }
+
+    private static boolean isVideoKiosk(@NonNull final String kioskId) {
+        return !"live".equals(kioskId)
+                && !"trending_music".equals(kioskId)
+                && !"trending_podcasts_episodes".equals(kioskId);
     }
 }

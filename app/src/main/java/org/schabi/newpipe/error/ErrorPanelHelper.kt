@@ -162,12 +162,10 @@ class ErrorPanelHelper(
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         val fallbackIntent = Intent(Settings.ACTION_SETTINGS)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        RokidExternalNavigationHelper.confirmAndOpen(
+        RokidExternalNavigationHelper.openExternalActivity(
             context,
             wifiIntent,
-            fallbackIntent,
-            R.string.rokid_wifi_settings,
-            R.string.rokid_wifi_settings_message
+            fallbackIntent
         )
     }
 

@@ -40,6 +40,18 @@ function Assert-AdbDeviceAvailable {
     Write-Host "Verified ADB device is connected"
 }
 
+function Get-WifiEnabled {
+    $value = Invoke-GlassesAdb -Arguments @("shell", "settings", "get", "global", "wifi_on") |
+            Select-Object -First 1
+    return $value.Trim() -eq "1"
+}
+
+function Set-WifiEnabled {
+    param([bool]$Enabled)
+    $state = if ($Enabled) { "enable" } else { "disable" }
+    Invoke-GlassesAdb -Arguments @("shell", "svc", "wifi", $state) | Out-Null
+}
+
 function Save-DeviceScreenshot {
     param([string]$Name)
     $remote = "/sdcard/$Name.png"
@@ -236,12 +248,16 @@ function Assert-RokidSourceGuards {
             "External Android settings launches are missing the R08 confirmation helper"
     Assert-SourceContains `
             "app\src\main\java\org\schabi\newpipe\error\ErrorPanelHelper.kt" `
-            "RokidExternalNavigationHelper.confirmAndOpen(" `
-            "Offline Wi-Fi recovery can still jump directly into Android settings"
+            "RokidExternalNavigationHelper.openExternalActivity(" `
+            "Offline Wi-Fi recovery no longer opens Android Wi-Fi settings directly"
     Assert-SourceDoesNotContain `
             "app\src\main\java\org\schabi\newpipe\error\ErrorPanelHelper.kt" `
-            "context.startActivity(wifiIntent)" `
-            "Offline Wi-Fi recovery still launches Android Wi-Fi settings directly"
+            "RokidExternalNavigationHelper.confirmAndOpen(" `
+            "Offline Wi-Fi recovery still shows a confirmation before Android Wi-Fi settings"
+    Assert-SourceContains `
+            "app\src\test\java\org\schabi\newpipe\rokid\RokidKioskNavigatorTest.java" `
+            "videosDoNotOpenMusicOrPodcastsWhenNoVideoKiosk" `
+            "Rokid Videos shortcut lacks a regression test against Trending Music"
     Assert-SourceContains `
             "app\src\main\java\org\schabi\newpipe\local\feed\notifications\NotificationHelper.kt" `
             "R.string.rokid_notification_settings_message" `
@@ -687,42 +703,6 @@ function Assert-NoUnnamedFocusableActions {
     Write-Host "Verified named focusable actions"
 }
 
-function Assert-WifiConfirmationDialog {
-    param([string]$Path)
-    $nodes = Get-UiNodes $Path
-    foreach ($label in @(
-            "Wi-Fi",
-            "This opens Android Wi-Fi settings outside NewPipe. Use Back to return.",
-            "CANCEL",
-            "OPEN SETTINGS"
-    )) {
-        Assert-Condition (@($nodes | Where-Object {
-            (Get-NodeAttribute $_ "package") -eq $Package -and
-                    (Get-NodeLabel $_) -eq $label
-        }).Count -gt 0) "Wi-Fi confirmation dialog is missing '$label'"
-    }
-    Write-Host "Verified Wi-Fi confirmation dialog"
-}
-
-function Assert-ScreenshotPixelNotWhite {
-    param(
-        [string]$Path,
-        [int]$X,
-        [int]$Y,
-        [string]$Message
-    )
-    Add-Type -AssemblyName System.Drawing
-    $bitmap = [System.Drawing.Bitmap]::FromFile((Resolve-Path $Path))
-    try {
-        $pixel = $bitmap.GetPixel($X, $Y)
-        Assert-Condition (($pixel.R -lt 240) -or ($pixel.G -lt 240) -or ($pixel.B -lt 240)) `
-                "$Message; pixel at $X,$Y is rgb($($pixel.R),$($pixel.G),$($pixel.B))"
-    } finally {
-        $bitmap.Dispose()
-    }
-    Write-Host "Verified screenshot pixel at $X,$Y is not white"
-}
-
 function Assert-DebugState {
     param(
         [string]$Path,
@@ -764,6 +744,31 @@ function Send-Key {
     param([int]$KeyCode)
     Invoke-GlassesAdb -Arguments @("shell", "input", "keyevent", "$KeyCode") | Out-Null
     Start-Sleep -Milliseconds 500
+}
+
+function Focus-ActionByLabel {
+    param(
+        [string]$Label,
+        [string]$ArtifactName,
+        [int]$DirectionKey = 21,
+        [int]$MaxMoves = 12
+    )
+    $lastState = $null
+    for ($move = 0; $move -le $MaxMoves; $move++) {
+        $statePath = Save-DebugState $ArtifactName
+        $lastState = Get-Content -Path $statePath -Raw | ConvertFrom-Json
+        if ($lastState.focused.label -eq $Label) {
+            Save-DebugState "$ArtifactName-focused" | Out-Null
+            return
+        }
+        if ($move -lt $MaxMoves) {
+            Send-Key $DirectionKey
+        }
+    }
+
+    $labels = (@($lastState.focusableActions) | ForEach-Object { $_.label }) -join ", "
+    Assert-Condition $false `
+            "expected focus on '$Label' after $MaxMoves moves; focused '$($lastState.focused.label)'; visible actions: $labels"
 }
 
 function Assert-TopResumedContains {
@@ -833,7 +838,7 @@ Start-Sleep -Seconds 10
 Save-DeviceScreenshot "01-launch"
 Save-WindowState "01-launch"
 
-Send-Key 21
+Focus-ActionByLabel "Search" "02-search-focus" 21
 Send-Key 23
 Start-Sleep -Seconds 1
 Save-DeviceScreenshot "02-search-keyboard"
@@ -845,29 +850,35 @@ Assert-DebugState $keyboardState -KeyboardVisible -RequireCustomSelectAction
 
 Invoke-GlassesAdb -Arguments @("shell", "input", "keyevent", "4") | Out-Null
 Start-Sleep -Milliseconds 800
-Invoke-GlassesAdb -Arguments @("shell", "am", "force-stop", $Package) | Out-Null
-Invoke-GlassesAdb -Arguments @(
-        "shell", "monkey", "-p", $Package, "-c", "android.intent.category.LAUNCHER", "1"
-) | Out-Null
-Start-Sleep -Seconds 10
-Send-Key 22
-Send-Key 22
-Send-Key 23
-Start-Sleep -Seconds 2
-Save-WindowState "03-wifi-recovery"
-Save-DeviceScreenshot "03-wifi-recovery"
-$wifiDump = Save-UiDump "03-wifi-recovery"
-Assert-WifiConfirmationDialog $wifiDump
-Assert-ScreenshotPixelNotWhite (Join-Path $Artifacts "03-wifi-recovery.png") 240 320 `
-        "Wi-Fi confirmation dialog is still rendering as a white blank panel"
-Send-Key 22
-Send-Key 23
-Start-Sleep -Seconds 2
-Save-DeviceScreenshot "03-wifi-settings-open"
-Assert-TopResumedContains "com\.android\.settings" `
-        "Wi-Fi confirmation dialog did not open Android Settings"
-Invoke-GlassesAdb -Arguments @("shell", "input", "keyevent", "4") | Out-Null
-Start-Sleep -Seconds 1
+$wifiWasEnabled = Get-WifiEnabled
+try {
+    if ($wifiWasEnabled) {
+        Set-WifiEnabled $false
+        Start-Sleep -Seconds 6
+    }
+    Invoke-GlassesAdb -Arguments @("shell", "pm", "clear", $Package) | Out-Null
+    Invoke-GlassesAdb -Arguments @("shell", "am", "force-stop", $Package) | Out-Null
+    Invoke-GlassesAdb -Arguments @(
+            "shell", "monkey", "-p", $Package, "-c", "android.intent.category.LAUNCHER", "1"
+    ) | Out-Null
+    Start-Sleep -Seconds 12
+    Save-WindowState "03-wifi-recovery"
+    Save-DeviceScreenshot "03-wifi-recovery"
+    Focus-ActionByLabel "Wi-Fi" "03-wifi-focus" 22
+    Send-Key 23
+    Start-Sleep -Seconds 2
+    Save-WindowState "03-wifi-settings-open"
+    Save-DeviceScreenshot "03-wifi-settings-open"
+    Start-Sleep -Seconds 2
+    Assert-TopResumedContains "com\.android\.settings" `
+            "Wi-Fi button did not open Android Settings directly"
+} finally {
+    Invoke-GlassesAdb -Arguments @("shell", "input", "keyevent", "4") | Out-Null
+    if ($wifiWasEnabled) {
+        Set-WifiEnabled $true
+        Start-Sleep -Seconds 3
+    }
+}
 
 if ($RunPlayer) {
     Invoke-GlassesAdb -Arguments @(

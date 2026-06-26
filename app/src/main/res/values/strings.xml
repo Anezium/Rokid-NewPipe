@@ -875,7 +875,6 @@
     <string name="rokid_seek_forward_static">+10s</string>
     <string name="rokid_wifi_settings">Wi-Fi</string>
     <string name="rokid_open_android_settings">Open settings</string>
-    <string name="rokid_wifi_settings_message">This opens Android Wi-Fi settings outside NewPipe. Use Back to return.</string>
     <string name="rokid_notification_settings_message">This opens Android notification settings outside NewPipe. Use Back to return.</string>
     <string name="rokid_caption_settings_message">This opens Android caption settings outside NewPipe. Use Back to return.</string>
     <string name="rokid_sound_settings_message">This opens Android sound settings outside NewPipe. Use Back to return.</string>

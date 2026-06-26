@@ -55,6 +55,7 @@ steps:
       - backupRestoreDialogs
       - externalPlayerInstallDialogs
       - migrationInfoDialog
+      - wifiSettingsDirectLaunch
       - composeAboutActivity
       - snackbarActions
       - appOwnedShareChooser
@@ -120,8 +121,8 @@ expect:
     androidXPreferenceDialogsUseRokidNavigation: true
     androidXEditTextPreferenceUsesRokidKeyboard: true
     appLanguageSettingAvoidsSystemSettingsInRokidMode: true
-    androidSettingsLaunchesUseRokidConfirmation: true
-    wifiSettingsLaunchUsesRokidConfirmation: true
+    nonWifiAndroidSettingsLaunchesUseRokidConfirmation: true
+    wifiSettingsLaunchOpensDirectly: true
     notificationSettingsLaunchUsesRokidConfirmation: true
     captionSettingsLaunchUsesRokidConfirmation: true
     soundSettingsLaunchUsesRokidConfirmation: true
@@ -170,7 +171,8 @@ notes:
   - "Settings search should use the Rokid keyboard overlay instead of opening the Android soft keyboard."
   - "AndroidX ListPreference, MultiSelectListPreference, and EditTextPreference dialogs should use NewPipe-owned R08 dialog navigation instead of default Preference dialogs."
   - "The app-language setting should stay inside NewPipe in Rokid mode instead of launching Android's per-app-language settings."
-  - "Android settings screens that cannot be owned by NewPipe should be opened through a NewPipe R08 confirmation dialog with Cancel and an explicit Open settings action."
+  - "Wi-Fi recovery should open Android Wi-Fi settings directly from the offline panel."
+  - "Other Android settings screens that cannot be owned by NewPipe should be opened through a NewPipe R08 confirmation dialog with Cancel and an explicit Open settings action."
   - "Android file/document pickers that cannot be owned by NewPipe should also be opened through a NewPipe R08 confirmation dialog instead of launching DocumentsUI immediately."
   - "AlertDialog and DialogFragment windows should attach their own R08 key listener; their events may not pass through MainActivity."
   - "Text-entry dialogs should mount the Rokid keyboard in the active dialog window so the keyboard is visible and accessible above the dialog."
