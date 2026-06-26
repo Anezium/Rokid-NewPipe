@@ -13,6 +13,7 @@ import org.schabi.newpipe.extractor.channel.ChannelInfoItem;
 import org.schabi.newpipe.extractor.utils.Utils;
 import org.schabi.newpipe.info_list.InfoItemBuilder;
 import org.schabi.newpipe.local.history.HistoryRecordManager;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.Localization;
 import org.schabi.newpipe.util.image.CoilHelper;
 
@@ -70,6 +71,8 @@ public class ChannelMiniInfoItemHolder extends InfoItemHolder {
             }
             return true;
         });
+        AccessibilityUtils.describeFocusableItem(itemView, item.getName(), detailLine,
+                item.getDescription());
 
         if (itemChannelDescriptionView != null) {
             // itemChannelDescriptionView will be null in the mini variant

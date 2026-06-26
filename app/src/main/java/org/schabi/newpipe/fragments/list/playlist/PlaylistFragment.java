@@ -48,6 +48,7 @@ import org.schabi.newpipe.local.dialog.PlaylistDialog;
 import org.schabi.newpipe.local.playlist.RemotePlaylistManager;
 import org.schabi.newpipe.player.playqueue.PlayQueue;
 import org.schabi.newpipe.player.playqueue.PlaylistPlayQueue;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.ExtractorHelper;
 import org.schabi.newpipe.util.Localization;
 import org.schabi.newpipe.util.NavigationHelper;
@@ -291,6 +292,11 @@ public class PlaylistFragment extends BaseListInfoFragment<StreamInfoItem, Playl
         if (!TextUtils.isEmpty(result.getUploaderName())) {
             headerBinding.uploaderName.setText(result.getUploaderName());
             if (!TextUtils.isEmpty(result.getUploaderUrl())) {
+                AccessibilityUtils.describeFocusableItem(headerBinding.uploaderLayout,
+                        result.getUploaderName());
+                headerBinding.uploaderAvatarView.setContentDescription(null);
+                headerBinding.uploaderAvatarView.setImportantForAccessibility(
+                        View.IMPORTANT_FOR_ACCESSIBILITY_NO);
                 headerBinding.uploaderLayout.setOnClickListener(v -> {
                     try {
                         NavigationHelper.openChannelFragment(getFM(), result.getServiceId(),

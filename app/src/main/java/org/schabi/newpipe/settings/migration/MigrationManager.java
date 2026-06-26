@@ -8,6 +8,7 @@ import androidx.core.util.Consumer;
 
 import org.schabi.newpipe.R;
 import org.schabi.newpipe.error.ErrorUtil;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -90,14 +91,16 @@ public final class MigrationManager {
     static AlertDialog createMigrationInfoDialog(@NonNull final Context uiContext,
                                                  @NonNull final String title,
                                                  @NonNull final String message) {
-        return new AlertDialog.Builder(uiContext)
+        final AlertDialog dialog = new AlertDialog.Builder(uiContext)
                 .setTitle(title)
                 .setMessage(message)
                 .setPositiveButton(R.string.ok, null)
-                .setOnDismissListener(dialog ->
+                .setOnDismissListener(dismissedDialog ->
                         MigrationManager.onMigrationInfoDismissed(uiContext))
                 .setCancelable(false) // prevents the dialog from being dismissed accidentally
                 .create();
+        RokidDialogNavigationHelper.attach(uiContext, dialog);
+        return dialog;
     }
 
 }

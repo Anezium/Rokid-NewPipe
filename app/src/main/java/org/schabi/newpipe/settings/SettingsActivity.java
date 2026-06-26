@@ -4,6 +4,7 @@ import android.content.Context;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -26,6 +27,10 @@ import com.livefront.bridge.Bridge;
 import org.schabi.newpipe.MainActivity;
 import org.schabi.newpipe.R;
 import org.schabi.newpipe.databinding.SettingsLayoutBinding;
+import org.schabi.newpipe.rokid.RokidFocusNavigator;
+import org.schabi.newpipe.rokid.RokidKeyMapper;
+import org.schabi.newpipe.rokid.RokidKeyboardController;
+import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.settings.preferencesearch.PreferenceParser;
 import org.schabi.newpipe.settings.preferencesearch.PreferenceSearchConfiguration;
 import org.schabi.newpipe.settings.preferencesearch.PreferenceSearchFragment;
@@ -136,6 +141,23 @@ public class SettingsActivity extends AppCompatActivity implements
     }
 
     @Override
+    public boolean dispatchKeyEvent(final KeyEvent event) {
+        if (RokidMode.enabled() && event.getAction() == KeyEvent.ACTION_DOWN) {
+            if (RokidKeyboardController.forActivity(this).handleKeyEvent(event)) {
+                return true;
+            }
+            if (event.getRepeatCount() > 0
+                    && RokidKeyMapper.isDirectionalKey(event.getKeyCode())) {
+                return true;
+            }
+            if (RokidFocusNavigator.handle(this, event)) {
+                return true;
+            }
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
+    @Override
     public void onBackPressed() {
         if (isSearchActive()) {
             setSearchActive(false);
@@ -188,6 +210,9 @@ public class SettingsActivity extends AppCompatActivity implements
 
     @Override
     protected void onDestroy() {
+        if (RokidMode.enabled()) {
+            RokidKeyboardController.hideAll(this);
+        }
         setMenuSearchItem(null);
         searchFragment = null;
         super.onDestroy();
@@ -309,7 +334,13 @@ public class SettingsActivity extends AppCompatActivity implements
                     .addToBackStack(PreferenceSearchFragment.NAME)
                     .commit();
 
-            KeyboardUtil.showKeyboard(this, searchEditText);
+            if (RokidMode.enabled()) {
+                RokidKeyboardController.forActivity(this).show(
+                        searchEditText,
+                        () -> searchEditText.clearFocus());
+            } else {
+                KeyboardUtil.showKeyboard(this, searchEditText);
+            }
         } else if (searchFragment != null) {
             hideSearchFragment();
             getSupportFragmentManager()
@@ -317,7 +348,11 @@ public class SettingsActivity extends AppCompatActivity implements
                         PreferenceSearchFragment.NAME,
                         FragmentManager.POP_BACK_STACK_INCLUSIVE);
 
-            KeyboardUtil.hideKeyboard(this, searchEditText);
+            if (RokidMode.enabled()) {
+                RokidKeyboardController.forActivity(this).hide(searchEditText);
+            } else {
+                KeyboardUtil.hideKeyboard(this, searchEditText);
+            }
         }
 
         resetSearchText();

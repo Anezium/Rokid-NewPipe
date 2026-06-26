@@ -21,6 +21,7 @@ import org.schabi.newpipe.extractor.ListExtractor;
 import org.schabi.newpipe.extractor.comments.CommentsInfoItem;
 import org.schabi.newpipe.fragments.list.BaseListInfoFragment;
 import org.schabi.newpipe.info_list.ItemViewMode;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.DeviceUtils;
 import org.schabi.newpipe.util.ExtractorHelper;
 import org.schabi.newpipe.util.Localization;
@@ -92,6 +93,11 @@ public final class CommentRepliesFragment
             binding.authorName.setText(item.getUploaderName());
             binding.uploadDate.setText(Localization.relativeTimeOrTextual(
                     getContext(), item.getUploadDate(), item.getTextualUploadDate()));
+            AccessibilityUtils.describeFocusableItem(binding.authorTouchArea,
+                    item.getUploaderName(), binding.uploadDate.getText());
+            binding.authorAvatar.setContentDescription(null);
+            binding.authorAvatar.setImportantForAccessibility(
+                    View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             binding.authorTouchArea.setOnClickListener(
                     v -> NavigationHelper.openCommentAuthorIfPresent(requireActivity(), item));
 

@@ -1,9 +1,7 @@
 package us.shandian.giga.ui.adapter;
 
-import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
 import static android.content.Intent.FLAG_GRANT_PREFIX_URI_PERMISSION;
 import static android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION;
-import static android.content.Intent.createChooser;
 import static us.shandian.giga.get.DownloadMission.ERROR_CONNECT_HOST;
 import static us.shandian.giga.get.DownloadMission.ERROR_FILE_CREATION;
 import static us.shandian.giga.get.DownloadMission.ERROR_HTTP_NO_CONTENT;
@@ -27,7 +25,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
@@ -63,7 +60,11 @@ import org.schabi.newpipe.error.ErrorInfo;
 import org.schabi.newpipe.error.ErrorUtil;
 import org.schabi.newpipe.error.UserAction;
 import org.schabi.newpipe.extractor.NewPipe;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
+import org.schabi.newpipe.rokid.RokidMode;
+import org.schabi.newpipe.rokid.RokidSnackbarHelper;
 import org.schabi.newpipe.streams.io.StoredFileHelper;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.Localization;
 import org.schabi.newpipe.util.NavigationHelper;
 import org.schabi.newpipe.util.external_communication.ShareUtils;
@@ -74,6 +75,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.text.DateFormat;
 
@@ -225,6 +227,7 @@ public class MissionAdapter extends Adapter<ViewHolder> implements Handler.Callb
             Date date = new Date(item.mission.timestamp);
             h.date.setText(dateFormat.format(date));
         }
+        updateAccessibility(h);
     }
 
     @Override
@@ -275,6 +278,7 @@ public class MissionAdapter extends Adapter<ViewHolder> implements Handler.Callb
 
         if (mission.isPsFailed() || mission.errCode == ERROR_POSTPROCESSING_HOLD) {
             h.size.setText(sizeStr);
+            updateAccessibility(h);
             return;
         } else if (!mission.running) {
             state = mission.enqueued ? R.string.queued : R.string.paused;
@@ -290,6 +294,7 @@ public class MissionAdapter extends Adapter<ViewHolder> implements Handler.Callb
             // update state without download speed
             h.size.setText(sizeStr.concat("(").concat(mContext.getString(state)).concat(")"));
             h.resetSpeedMeasure();
+            updateAccessibility(h);
             return;
         }
 
@@ -297,6 +302,7 @@ public class MissionAdapter extends Adapter<ViewHolder> implements Handler.Callb
             h.size.setText(sizeStr);
             h.lastTimestamp = now;
             h.lastDone = done;
+            updateAccessibility(h);
             return;
         }
 
@@ -341,6 +347,19 @@ public class MissionAdapter extends Adapter<ViewHolder> implements Handler.Callb
 
             if (h.lastSpeedIdx >= h.lastSpeed.length) h.lastSpeedIdx = 0;
         }
+        updateAccessibility(h);
+    }
+
+    private void updateAccessibility(@NonNull ViewHolderItem h) {
+        if (h.item == null || h.item.mission == null) return;
+
+        final String name = h.item.mission.storage.getName();
+        AccessibilityUtils.describeFocusableItem(h.itemView, name, h.status.getText(),
+                h.size.getText(), h.date.getText());
+        AccessibilityUtils.describeFocusableItem(h.more,
+                mContext.getString(R.string.more_options), name);
+        h.icon.setContentDescription(null);
+        h.icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
     }
 
     private void viewWithFileProvider(Mission mission) {
@@ -356,12 +375,7 @@ public class MissionAdapter extends Adapter<ViewHolder> implements Handler.Callb
         viewIntent.addFlags(FLAG_GRANT_READ_URI_PERMISSION);
         viewIntent.addFlags(FLAG_GRANT_PREFIX_URI_PERMISSION);
 
-        Intent chooserIntent = createChooser(viewIntent, null);
-        chooserIntent.addFlags(FLAG_ACTIVITY_NEW_TASK);
-        chooserIntent.addFlags(FLAG_GRANT_READ_URI_PERMISSION);
-        chooserIntent.addFlags(FLAG_GRANT_PREFIX_URI_PERMISSION);
-
-        ShareUtils.openIntentInApp(mContext, chooserIntent);
+        ShareUtils.openIntentChooser(mContext, viewIntent, true);
     }
 
     private void shareFile(Mission mission) {
@@ -370,18 +384,10 @@ public class MissionAdapter extends Adapter<ViewHolder> implements Handler.Callb
         final Intent shareIntent = new Intent(Intent.ACTION_SEND);
         shareIntent.setType(resolveMimeType(mission));
         shareIntent.putExtra(Intent.EXTRA_STREAM, resolveShareableUri(mission));
+        shareIntent.putExtra(Intent.EXTRA_TITLE, mContext.getString(R.string.share_dialog_title));
         shareIntent.addFlags(FLAG_GRANT_READ_URI_PERMISSION);
 
-        final Intent intent = createChooser(shareIntent, null);
-        // unneeded to set a title to the chooser on Android P and higher because the system
-        // ignores this title on these versions
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.O_MR1) {
-            intent.putExtra(Intent.EXTRA_TITLE, mContext.getString(R.string.share_dialog_title));
-        }
-        intent.addFlags(FLAG_ACTIVITY_NEW_TASK);
-        intent.addFlags(FLAG_GRANT_READ_URI_PERMISSION);
-
-        mContext.startActivity(intent);
+        ShareUtils.openIntentChooser(mContext, shareIntent, false);
     }
 
     /**
@@ -553,8 +559,8 @@ public class MissionAdapter extends Adapter<ViewHolder> implements Handler.Callb
         }
 
         builder.setNegativeButton(R.string.ok, (dialog, which) -> dialog.cancel())
-                .setTitle(mission.storage.getName())
-                .show();
+                .setTitle(mission.storage.getName());
+        RokidDialogNavigationHelper.show(mContext, builder);
     }
 
     private void showError(DownloadMission mission, UserAction action, @StringRes int reason) {
@@ -605,7 +611,7 @@ public class MissionAdapter extends Adapter<ViewHolder> implements Handler.Callb
                 mHandler.removeCallbacksAndMessages(DELETE);
             });
             mSnackbar.setActionTextColor(Color.YELLOW);
-            mSnackbar.show();
+            RokidSnackbarHelper.show(mSnackbar);
 
             HandlerCompat.postDelayed(mHandler, this::deleteFinishedDownloads, DELETE, 5000);
         } else if (!delete) {
@@ -845,6 +851,7 @@ public class MissionAdapter extends Adapter<ViewHolder> implements Handler.Callb
 
         TextView status;
         ImageView icon;
+        ImageView more;
         TextView name;
         TextView size;
         TextView date;
@@ -882,9 +889,9 @@ public class MissionAdapter extends Adapter<ViewHolder> implements Handler.Callb
 
             name.setSelected(true);
 
-            ImageView button = itemView.findViewById(R.id.item_more);
-            popupMenu = buildPopup(button);
-            button.setOnClickListener(v -> showPopupMenu());
+            more = itemView.findViewById(R.id.item_more);
+            popupMenu = buildPopup(more);
+            more.setOnClickListener(v -> showPopupMenu());
 
             Menu menu = popupMenu.getMenu();
             retry = menu.findItem(R.id.retry);
@@ -901,8 +908,11 @@ public class MissionAdapter extends Adapter<ViewHolder> implements Handler.Callb
             itemView.setHapticFeedbackEnabled(true);
 
             itemView.setOnClickListener(v -> {
-                if (item.mission instanceof FinishedMission)
+                if (item.mission instanceof FinishedMission) {
                     viewWithFileProvider(item.mission);
+                } else if (RokidMode.enabled()) {
+                    showPopupMenu();
+                }
             });
 
             itemView.setOnLongClickListener(v -> {
@@ -967,7 +977,40 @@ public class MissionAdapter extends Adapter<ViewHolder> implements Handler.Callb
                 source.setVisible(true);
             }
 
-            popupMenu.show();
+            if (RokidMode.enabled()) {
+                showRokidPopupMenu();
+            } else {
+                popupMenu.show();
+            }
+        }
+
+        private void showRokidPopupMenu() {
+            final List<MenuItem> visibleItems = new ArrayList<>();
+            collectVisibleMenuItems(popupMenu.getMenu(), visibleItems);
+            final CharSequence[] labels = visibleItems.stream()
+                    .map(MenuItem::getTitle)
+                    .toArray(CharSequence[]::new);
+
+            RokidDialogNavigationHelper.show(mContext, new AlertDialog.Builder(mContext)
+                    .setTitle(item.mission.storage.getName())
+                    .setItems(labels, (dialog, which) ->
+                            handlePopupItem(this, visibleItems.get(which)))
+            );
+        }
+
+        private void collectVisibleMenuItems(@NonNull final Menu menu,
+                                             @NonNull final List<MenuItem> target) {
+            for (int i = 0; i < menu.size(); i++) {
+                final MenuItem menuItem = menu.getItem(i);
+                if (!menuItem.isVisible()) {
+                    continue;
+                }
+                if (menuItem.hasSubMenu()) {
+                    collectVisibleMenuItems(menuItem.getSubMenu(), target);
+                } else {
+                    target.add(menuItem);
+                }
+            }
         }
 
         private PopupMenu buildPopup(final View button) {

@@ -5,6 +5,9 @@ import android.text.TextUtils;
 import android.view.MotionEvent;
 import android.view.View;
 
+import org.schabi.newpipe.R;
+import org.schabi.newpipe.rokid.RokidMode;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.Localization;
 import org.schabi.newpipe.util.ServiceHelper;
 import org.schabi.newpipe.util.image.CoilHelper;
@@ -29,11 +32,16 @@ public class PlayQueueItemBuilder {
 
         if (item.getDuration() > 0) {
             holder.itemDurationView.setText(Localization.getDurationString(item.getDuration()));
+            holder.itemDurationView.setVisibility(View.VISIBLE);
         } else {
+            holder.itemDurationView.setText("");
             holder.itemDurationView.setVisibility(View.GONE);
         }
 
         CoilHelper.INSTANCE.loadThumbnail(holder.itemThumbnailView, item.getThumbnails());
+        AccessibilityUtils.describeFocusableItem(holder.itemRoot, item.getTitle(),
+                holder.itemAdditionalDetailsView.getText(), holder.itemDurationView.getText());
+        holder.itemThumbnailView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
 
         holder.itemRoot.setOnClickListener(view -> {
             if (onItemClickListener != null) {
@@ -49,7 +57,22 @@ public class PlayQueueItemBuilder {
             return false;
         });
 
-        holder.itemHandle.setOnTouchListener(getOnTouchListener(holder));
+        holder.itemHandle.setOnClickListener(null);
+        if (RokidMode.enabled()) {
+            AccessibilityUtils.describeFocusableItem(holder.itemHandle, item.getTitle(),
+                    holder.itemHandle.getContext().getString(R.string.rokid_move_down));
+            holder.itemHandle.setClickable(true);
+            holder.itemHandle.setOnTouchListener(null);
+            holder.itemHandle.setOnClickListener(view -> {
+                if (onItemClickListener != null) {
+                    onItemClickListener.onStartDrag(holder);
+                }
+            });
+        } else {
+            holder.itemHandle.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            holder.itemHandle.setFocusable(false);
+            holder.itemHandle.setOnTouchListener(getOnTouchListener(holder));
+        }
     }
 
     private View.OnTouchListener getOnTouchListener(final PlayQueueItemHolder holder) {

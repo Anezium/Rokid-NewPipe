@@ -29,6 +29,9 @@ import com.livefront.bridge.Bridge;
 import org.schabi.newpipe.R;
 import org.schabi.newpipe.databinding.DialogPlaybackParameterBinding;
 import org.schabi.newpipe.player.ui.VideoPlayerUi;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
+import org.schabi.newpipe.rokid.RokidMode;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.SimpleOnSeekBarChangeListener;
 import org.schabi.newpipe.util.SliderStrategy;
 
@@ -166,7 +169,11 @@ public class PlaybackParameterDialog extends DialogFragment {
                 })
                 .setPositiveButton(R.string.ok, (dialogInterface, i) -> updateCallback());
 
-        return dialogBuilder.create();
+        final AlertDialog dialog = dialogBuilder.create();
+        if (RokidMode.enabled()) {
+            RokidDialogNavigationHelper.attach(requireActivity(), dialog);
+        }
+        return dialog;
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -275,6 +282,7 @@ public class PlaybackParameterDialog extends DialogFragment {
 
         // PitchControlMode has to be initialized at the end because it requires the unhookCheckbox
         changePitchControlMode(isCurrentPitchControlModeSemitone());
+        configureRokidControls();
     }
 
     // -- General formatting --
@@ -299,6 +307,7 @@ public class PlaybackParameterDialog extends DialogFragment {
             newValueConsumer.accept(
                     currentValueSupplier.getAsDouble() + 1 * getCurrentStepSize() * direction);
             updateCallback();
+            updateRokidContentDescriptions();
         });
     }
 
@@ -311,6 +320,7 @@ public class PlaybackParameterDialog extends DialogFragment {
             newValueConsumer.accept(PlayerSemitoneHelper.semitonesToPercent(
                     PlayerSemitoneHelper.percentToSemitones(this.pitchPercent) + direction));
             updateCallback();
+            updateRokidContentDescriptions();
         });
     }
 
@@ -327,6 +337,7 @@ public class PlaybackParameterDialog extends DialogFragment {
                     .apply();
 
             changePitchControlMode(semitones);
+            updateRokidContentDescriptions();
         });
     }
 
@@ -398,6 +409,7 @@ public class PlaybackParameterDialog extends DialogFragment {
                     .apply();
 
             setStepSizeToUI(stepSizeValue);
+            updateRokidContentDescriptions();
         });
     }
 
@@ -430,6 +442,7 @@ public class PlaybackParameterDialog extends DialogFragment {
 
         binding.pitchPercentStepUp.setText(getStepUpPercentString(newStepSize));
         binding.pitchPercentStepDown.setText(getStepDownPercentString(newStepSize));
+        updateRokidContentDescriptions();
     }
 
     private double getCurrentStepSize() {
@@ -442,6 +455,7 @@ public class PlaybackParameterDialog extends DialogFragment {
     private void setAndUpdateSkipSilence(final boolean newSkipSilence) {
         this.skipSilence = newSkipSilence;
         binding.skipSilenceCheckbox.setChecked(newSkipSilence);
+        updateRokidContentDescriptions();
     }
 
     @SuppressWarnings("SameParameterValue") // this method was written to be reusable
@@ -467,6 +481,7 @@ public class PlaybackParameterDialog extends DialogFragment {
                     .apply();
 
             onInitialValueOrValueChange.accept(isChecked);
+            updateRokidContentDescriptions();
         });
     }
 
@@ -529,6 +544,7 @@ public class PlaybackParameterDialog extends DialogFragment {
 
         binding.tempoSeekbar.setProgress(QUADRATIC_STRATEGY.progressOf(tempo));
         setText(binding.tempoCurrentText, PlayerHelper::formatSpeed, tempo);
+        updateRokidContentDescriptions();
     }
 
     private void setAndUpdatePitch(final double newPitch) {
@@ -542,6 +558,93 @@ public class PlaybackParameterDialog extends DialogFragment {
         setText(binding.pitchSemitoneCurrentText,
                 PlayerSemitoneHelper::formatPitchSemitones,
                 pitchPercent);
+        updateRokidContentDescriptions();
+    }
+
+    private void configureRokidControls() {
+        if (!RokidMode.enabled()) {
+            return;
+        }
+
+        disableRokidSeekBar(binding.tempoSeekbar);
+        disableRokidSeekBar(binding.pitchPercentSeekbar);
+        disableRokidSeekBar(binding.pitchSemitoneSeekbar);
+        updateRokidContentDescriptions();
+    }
+
+    private void disableRokidSeekBar(@NonNull final SeekBar seekBar) {
+        seekBar.setFocusable(false);
+        seekBar.setFocusableInTouchMode(false);
+        seekBar.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+    }
+
+    private void updateRokidContentDescriptions() {
+        if (!RokidMode.enabled() || binding == null) {
+            return;
+        }
+
+        final CharSequence tempoValue = binding.tempoCurrentText.getText();
+        AccessibilityUtils.describeFocusableItem(binding.tempoStepDown,
+                getString(R.string.playback_tempo), tempoValue,
+                getString(R.string.rokid_decrease));
+        AccessibilityUtils.describeFocusableItem(binding.tempoStepUp,
+                getString(R.string.playback_tempo), tempoValue,
+                getString(R.string.rokid_increase));
+
+        final CharSequence pitchValue = isCurrentPitchControlModeSemitone()
+                ? binding.pitchSemitoneCurrentText.getText()
+                : binding.pitchPercentCurrentText.getText();
+        AccessibilityUtils.describeFocusableItem(binding.pitchToogleControlModes,
+                getString(R.string.playback_pitch), pitchValue,
+                getString(R.string.rokid_change_mode));
+        AccessibilityUtils.describeFocusableItem(binding.pitchControlModePercent,
+                getString(R.string.percent),
+                isCurrentPitchControlModeSemitone() ? null : getString(R.string.rokid_selected));
+        AccessibilityUtils.describeFocusableItem(binding.pitchControlModeSemitone,
+                getString(R.string.semitone),
+                isCurrentPitchControlModeSemitone() ? getString(R.string.rokid_selected) : null);
+        AccessibilityUtils.describeFocusableItem(binding.pitchPercentStepDown,
+                getString(R.string.playback_pitch), binding.pitchPercentCurrentText.getText(),
+                getString(R.string.rokid_decrease));
+        AccessibilityUtils.describeFocusableItem(binding.pitchPercentStepUp,
+                getString(R.string.playback_pitch), binding.pitchPercentCurrentText.getText(),
+                getString(R.string.rokid_increase));
+        AccessibilityUtils.describeFocusableItem(binding.pitchSemitoneStepDown,
+                getString(R.string.playback_pitch), binding.pitchSemitoneCurrentText.getText(),
+                getString(R.string.rokid_decrease));
+        AccessibilityUtils.describeFocusableItem(binding.pitchSemitoneStepUp,
+                getString(R.string.playback_pitch), binding.pitchSemitoneCurrentText.getText(),
+                getString(R.string.rokid_increase));
+
+        final double currentStep = getCurrentStepSize();
+        describeRokidStepSize(binding.stepSizeOnePercent, STEP_1_PERCENT_VALUE, currentStep);
+        describeRokidStepSize(binding.stepSizeFivePercent, STEP_5_PERCENT_VALUE, currentStep);
+        describeRokidStepSize(binding.stepSizeTenPercent, STEP_10_PERCENT_VALUE, currentStep);
+        describeRokidStepSize(binding.stepSizeTwentyFivePercent, STEP_25_PERCENT_VALUE,
+                currentStep);
+        describeRokidStepSize(binding.stepSizeOneHundredPercent, STEP_100_PERCENT_VALUE,
+                currentStep);
+
+        AccessibilityUtils.describeFocusableItem(binding.unhookCheckbox,
+                binding.unhookCheckbox.getText(),
+                binding.unhookCheckbox.isChecked()
+                        ? getString(R.string.on) : getString(R.string.off));
+        AccessibilityUtils.describeFocusableItem(binding.skipSilenceCheckbox,
+                binding.skipSilenceCheckbox.getText(),
+                binding.skipSilenceCheckbox.isChecked()
+                        ? getString(R.string.on) : getString(R.string.off));
+    }
+
+    private void describeRokidStepSize(
+            @NonNull final View view,
+            final double value,
+            final double currentStep
+    ) {
+        AccessibilityUtils.describeFocusableItem(view,
+                getString(R.string.playback_step),
+                getPercentString(value),
+                Math.abs(value - currentStep) < 0.0001f
+                        ? getString(R.string.rokid_selected) : null);
     }
 
     private double calcValidPitch(final double newPitch) {

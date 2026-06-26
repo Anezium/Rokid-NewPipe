@@ -1,12 +1,15 @@
 package org.schabi.newpipe.local.dialog;
 
 import android.app.Dialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.text.InputType;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AlertDialog.Builder;
 
 import org.schabi.newpipe.NewPipeDatabase;
@@ -14,6 +17,7 @@ import org.schabi.newpipe.R;
 import org.schabi.newpipe.database.stream.model.StreamEntity;
 import org.schabi.newpipe.databinding.DialogEditTextBinding;
 import org.schabi.newpipe.local.playlist.LocalPlaylistManager;
+import org.schabi.newpipe.rokid.RokidTextInputHelper;
 import org.schabi.newpipe.util.ThemeHelper;
 
 import java.util.List;
@@ -21,6 +25,9 @@ import java.util.List;
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 
 public final class PlaylistCreationDialog extends PlaylistDialog {
+    @Nullable
+    private EditText rokidEditText;
+
 
     /**
      * Create a new instance of {@link PlaylistCreationDialog}.
@@ -47,6 +54,7 @@ public final class PlaylistCreationDialog extends PlaylistDialog {
 
         final DialogEditTextBinding dialogBinding =
                 DialogEditTextBinding.inflate(getLayoutInflater());
+        rokidEditText = dialogBinding.dialogEditText;
         dialogBinding.getRoot().getContext().setTheme(ThemeHelper.getDialogTheme(requireContext()));
         dialogBinding.dialogEditText.setHint(R.string.name);
         dialogBinding.dialogEditText.setInputType(InputType.TYPE_CLASS_TEXT);
@@ -68,7 +76,17 @@ public final class PlaylistCreationDialog extends PlaylistDialog {
                     playlistManager.createPlaylist(name, getStreamEntities())
                             .observeOn(AndroidSchedulers.mainThread())
                             .subscribe(longs -> successToast.show());
-                });
-        return dialogBuilder.create();
+        });
+        final AlertDialog dialog = dialogBuilder.create();
+        RokidTextInputHelper.attachOnShow(requireActivity(), dialog, dialogBinding.dialogEditText);
+        return dialog;
+    }
+
+    @Override
+    public void onDismiss(@NonNull final DialogInterface dialog) {
+        if (getActivity() != null && rokidEditText != null) {
+            RokidTextInputHelper.hide(requireActivity(), rokidEditText);
+        }
+        super.onDismiss(dialog);
     }
 }

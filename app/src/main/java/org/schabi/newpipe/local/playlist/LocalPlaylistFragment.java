@@ -58,6 +58,10 @@ import org.schabi.newpipe.local.BaseLocalListFragment;
 import org.schabi.newpipe.local.history.HistoryRecordManager;
 import org.schabi.newpipe.player.playqueue.PlayQueue;
 import org.schabi.newpipe.player.playqueue.SinglePlayQueue;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
+import org.schabi.newpipe.rokid.RokidMode;
+import org.schabi.newpipe.rokid.RokidTextInputHelper;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.DeviceUtils;
 import org.schabi.newpipe.util.Localization;
 import org.schabi.newpipe.util.NavigationHelper;
@@ -153,6 +157,8 @@ public class LocalPlaylistFragment extends BaseLocalListFragment<List<PlaylistSt
 
         if (headerBinding != null) {
             headerBinding.playlistTitleView.setText(title);
+            AccessibilityUtils.describeFocusableItem(headerBinding.playlistTitleView,
+                    getString(R.string.rename_playlist), title);
         }
     }
 
@@ -202,6 +208,10 @@ public class LocalPlaylistFragment extends BaseLocalListFragment<List<PlaylistSt
             @Override
             public void drag(final LocalItem selectedItem,
                              final RecyclerView.ViewHolder viewHolder) {
+                if (RokidMode.enabled()) {
+                    movePlaylistItemDown(viewHolder.getBindingAdapterPosition());
+                    return;
+                }
                 if (itemTouchHelper != null) {
                     itemTouchHelper.startDrag(viewHolder);
                 }
@@ -550,14 +560,16 @@ public class LocalPlaylistFragment extends BaseLocalListFragment<List<PlaylistSt
         dialogBinding.dialogEditText.setSelection(dialogBinding.dialogEditText.getText().length());
         dialogBinding.dialogEditText.setText(name);
 
-        new AlertDialog.Builder(getContext())
+        final AlertDialog dialog = new AlertDialog.Builder(getContext())
                 .setTitle(R.string.rename_playlist)
                 .setView(dialogBinding.getRoot())
                 .setCancelable(true)
                 .setNegativeButton(R.string.cancel, null)
                 .setPositiveButton(R.string.rename, (dialogInterface, i) ->
                         changePlaylistName(dialogBinding.dialogEditText.getText().toString()))
-                .show();
+                .create();
+        RokidTextInputHelper.attach(requireActivity(), dialog, dialogBinding.dialogEditText);
+        dialog.show();
     }
 
     private void changePlaylistName(final String title) {
@@ -623,13 +635,12 @@ public class LocalPlaylistFragment extends BaseLocalListFragment<List<PlaylistSt
     }
 
     private void openRemoveDuplicatesDialog() {
-        new AlertDialog.Builder(this.getActivity())
+        RokidDialogNavigationHelper.show(requireContext(), new AlertDialog.Builder(requireContext())
                 .setTitle(R.string.remove_duplicates_title)
                 .setMessage(R.string.remove_duplicates_message)
                 .setPositiveButton(R.string.ok, (dialog, i) ->
                         removeDuplicatesInPlaylist())
-                .setNeutralButton(R.string.cancel, null)
-                .show();
+                .setNeutralButton(R.string.cancel, null));
     }
 
     private void removeDuplicatesInPlaylist() {
@@ -715,6 +726,15 @@ public class LocalPlaylistFragment extends BaseLocalListFragment<List<PlaylistSt
                                 UserAction.REQUESTED_BOOKMARK, "Saving playlist"))
                 );
         disposables.add(disposable);
+    }
+
+    private void movePlaylistItemDown(final int adapterPosition) {
+        if (itemListAdapter == null || debounceSaver == null
+                || !itemListAdapter.moveItemDown(adapterPosition)) {
+            return;
+        }
+        debounceSaver.setHasChangesToSave();
+        saveImmediate();
     }
 
 
@@ -873,7 +893,7 @@ public class LocalPlaylistFragment extends BaseLocalListFragment<List<PlaylistSt
      * After the user has made a choice, the playlist is shared.
      */
     private void createShareConfirmationDialog() {
-        new AlertDialog.Builder(requireContext())
+        RokidDialogNavigationHelper.show(requireContext(), new AlertDialog.Builder(requireContext())
                 .setTitle(R.string.share_playlist)
                 .setCancelable(true)
                 .setPositiveButton(R.string.share_playlist_with_titles, (dialog, which) ->
@@ -884,8 +904,7 @@ public class LocalPlaylistFragment extends BaseLocalListFragment<List<PlaylistSt
                 )
                 .setNegativeButton(R.string.share_playlist_with_list, (dialog, which) ->
                     sharePlaylist(JUST_URLS)
-                )
-                .show();
+                ));
     }
 
     /**
@@ -907,14 +926,13 @@ public class LocalPlaylistFragment extends BaseLocalListFragment<List<PlaylistSt
         checkboxContainer.addView(removePartiallyWatchedCheckbox,
                 new LayoutParams(MATCH_PARENT, WRAP_CONTENT));
 
-        new AlertDialog.Builder(requireContext())
+        RokidDialogNavigationHelper.show(requireContext(), new AlertDialog.Builder(requireContext())
                 .setMessage(R.string.remove_watched_popup_warning)
                 .setTitle(R.string.remove_watched_popup_title)
                 .setView(checkboxContainer)
                 .setPositiveButton(R.string.yes, (d, id) ->
                         removeWatchedStreams(removePartiallyWatchedCheckbox.isChecked()))
-                .setNegativeButton(R.string.cancel, (d, id) -> d.cancel())
-                .show();
+                .setNegativeButton(R.string.cancel, (d, id) -> d.cancel()));
     }
 
     public void setTabsPagerAdapter(

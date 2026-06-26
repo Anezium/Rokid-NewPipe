@@ -11,6 +11,7 @@ import androidx.core.os.HandlerCompat;
 import com.google.android.material.snackbar.Snackbar;
 
 import org.schabi.newpipe.R;
+import org.schabi.newpipe.rokid.RokidSnackbarHelper;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -104,7 +105,7 @@ public class Deleter {
         snackbar = Snackbar.make(mView, msg, Snackbar.LENGTH_INDEFINITE);
         snackbar.setAction(R.string.undo, s -> forget());
         snackbar.setActionTextColor(Color.YELLOW);
-        snackbar.show();
+        RokidSnackbarHelper.show(snackbar);
 
         HandlerCompat.postDelayed(mHandler, this::commit, COMMIT, TIMEOUT);
     }

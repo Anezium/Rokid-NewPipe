@@ -16,6 +16,7 @@ import androidx.preference.PreferenceManager
 import com.google.android.material.snackbar.Snackbar
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.R
+import org.schabi.newpipe.rokid.RokidSnackbarHelper
 
 /**
  * This class contains all of the methods that should be used to let the user know that an error has
@@ -159,11 +160,13 @@ class ErrorUtil {
                 // fallback to showing a notification if no root view is available
                 createNotification(context, errorInfo)
             } else {
-                Snackbar.make(rootView, errorInfo.getMessage(context), Snackbar.LENGTH_LONG)
-                    .setActionTextColor(Color.YELLOW)
-                    .setAction(context.getString(R.string.error_snackbar_action).uppercase()) {
-                        context.startActivity(getErrorActivityIntent(context, errorInfo))
-                    }.show()
+                RokidSnackbarHelper.show(
+                    Snackbar.make(rootView, errorInfo.getMessage(context), Snackbar.LENGTH_LONG)
+                        .setActionTextColor(Color.YELLOW)
+                        .setAction(context.getString(R.string.error_snackbar_action).uppercase()) {
+                            context.startActivity(getErrorActivityIntent(context, errorInfo))
+                        }
+                )
             }
         }
     }

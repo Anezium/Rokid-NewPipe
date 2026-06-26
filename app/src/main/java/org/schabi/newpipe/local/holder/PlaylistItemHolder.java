@@ -1,5 +1,6 @@
 package org.schabi.newpipe.local.holder;
 
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -8,6 +9,7 @@ import org.schabi.newpipe.R;
 import org.schabi.newpipe.database.LocalItem;
 import org.schabi.newpipe.local.LocalItemBuilder;
 import org.schabi.newpipe.local.history.HistoryRecordManager;
+import org.schabi.newpipe.util.AccessibilityUtils;
 
 import java.time.format.DateTimeFormatter;
 
@@ -48,5 +50,9 @@ public abstract class PlaylistItemHolder extends LocalItemHolder {
             }
             return true;
         });
+        AccessibilityUtils.describeFocusableItem(itemView, itemTitleView.getText(),
+                itemUploaderView.getVisibility() == View.VISIBLE ? itemUploaderView.getText()
+                        : null,
+                itemStreamCountView.getText());
     }
 }

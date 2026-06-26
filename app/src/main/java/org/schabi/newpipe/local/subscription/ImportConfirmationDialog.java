@@ -21,6 +21,7 @@ import com.livefront.bridge.Bridge;
 import org.schabi.newpipe.R;
 import org.schabi.newpipe.local.subscription.workers.SubscriptionImportInput;
 import org.schabi.newpipe.local.subscription.workers.SubscriptionImportWorker;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
 
 public class ImportConfirmationDialog extends DialogFragment {
     private static final String INPUT = "input";
@@ -37,7 +38,7 @@ public class ImportConfirmationDialog extends DialogFragment {
     @Override
     public Dialog onCreateDialog(@Nullable final Bundle savedInstanceState) {
         final var context = requireContext();
-        return new AlertDialog.Builder(context)
+        final Dialog dialog = new AlertDialog.Builder(context)
                 .setMessage(R.string.import_network_expensive_warning)
                 .setCancelable(true)
                 .setNegativeButton(R.string.cancel, null)
@@ -61,6 +62,8 @@ public class ImportConfirmationDialog extends DialogFragment {
                     dismiss();
                 })
                 .create();
+        RokidDialogNavigationHelper.attach(requireActivity(), dialog);
+        return dialog;
     }
 
     @Override

@@ -12,6 +12,7 @@ import androidx.preference.ListPreference;
 import com.google.android.material.snackbar.Snackbar;
 
 import org.schabi.newpipe.R;
+import org.schabi.newpipe.rokid.RokidSnackbarHelper;
 import org.schabi.newpipe.util.ListHelper;
 import org.schabi.newpipe.util.PermissionHelper;
 
@@ -38,11 +39,10 @@ public class VideoAudioSettingsFragment extends BasePreferenceFragment {
                         && newSetting.equals(getString(R.string.minimize_on_exit_popup_key))
                         && !Settings.canDrawOverlays(getContext())) {
 
-                    Snackbar.make(getListView(), R.string.permission_display_over_apps,
-                            Snackbar.LENGTH_INDEFINITE)
-                            .setAction(R.string.settings, view ->
-                                    PermissionHelper.checkSystemAlertWindowPermission(getContext()))
-                            .show();
+                    RokidSnackbarHelper.show(Snackbar.make(getListView(),
+                            R.string.permission_display_over_apps, Snackbar.LENGTH_INDEFINITE)
+                            .setAction(R.string.settings, view -> PermissionHelper
+                                    .checkSystemAlertWindowPermission(getContext())));
 
                 }
             } else if (getString(R.string.use_inexact_seek_key).equals(key)) {

@@ -26,6 +26,7 @@ import org.schabi.newpipe.R;
 import org.schabi.newpipe.databinding.ListRadioIconItemBinding;
 import org.schabi.newpipe.databinding.SingleChoiceDialogViewBinding;
 import org.schabi.newpipe.player.Player;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
 import org.schabi.newpipe.util.ThemeHelper;
 
 import java.io.IOException;
@@ -121,6 +122,7 @@ public final class VideoDetailPlayerCrasher {
             binding.list.addView(radioButton);
         }
 
+        RokidDialogNavigationHelper.attach(themeWrapperContext, alertDialog);
         alertDialog.show();
     }
 

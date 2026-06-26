@@ -4,6 +4,7 @@ import static org.schabi.newpipe.extractor.stream.DeliveryMethod.PROGRESSIVE_HTT
 import static org.schabi.newpipe.util.ListHelper.getStreamsOfSpecifiedDelivery;
 
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -15,6 +16,7 @@ import android.os.Environment;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -56,10 +58,18 @@ import org.schabi.newpipe.extractor.stream.Stream;
 import org.schabi.newpipe.extractor.stream.StreamInfo;
 import org.schabi.newpipe.extractor.stream.SubtitlesStream;
 import org.schabi.newpipe.extractor.stream.VideoStream;
+import org.schabi.newpipe.rokid.RokidAccessibilityActionHelper;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
+import org.schabi.newpipe.rokid.RokidExternalNavigationHelper;
+import org.schabi.newpipe.rokid.RokidKeyMapper;
+import org.schabi.newpipe.rokid.RokidKeyboardController;
+import org.schabi.newpipe.rokid.RokidMode;
+import org.schabi.newpipe.rokid.RokidTextInputHelper;
 import org.schabi.newpipe.settings.NewPipeSettings;
 import org.schabi.newpipe.streams.io.NoFileManagerSafeGuard;
 import org.schabi.newpipe.streams.io.StoredDirectoryHelper;
 import org.schabi.newpipe.streams.io.StoredFileHelper;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.AudioTrackAdapter;
 import org.schabi.newpipe.util.AudioTrackAdapter.AudioTracksWrapper;
 import org.schabi.newpipe.util.FilePickerActivityHelper;
@@ -75,6 +85,7 @@ import org.schabi.newpipe.util.ThemeHelper;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -109,6 +120,8 @@ public class DownloadDialog extends DialogFragment
     int selectedAudioIndex = 0; // default to the first item
     @State
     int selectedSubtitleIndex = 0; // default to the first item
+    @State
+    int rokidSelectedControlIndex = 0;
 
     private StoredDirectoryHelper mainStorageAudio = null;
     private StoredDirectoryHelper mainStorageVideo = null;
@@ -233,6 +246,7 @@ public class DownloadDialog extends DialogFragment
                 askForSavePath = mgr.askForSavePath();
 
                 okButton.setEnabled(true);
+                updateRokidControls();
 
                 context.unbindService(this);
             }
@@ -242,6 +256,15 @@ public class DownloadDialog extends DialogFragment
                 // nothing to do
             }
         }, Context.BIND_AUTO_CREATE);
+    }
+
+    @NonNull
+    @Override
+    public Dialog onCreateDialog(@Nullable final Bundle savedInstanceState) {
+        final Dialog dialog = super.onCreateDialog(savedInstanceState);
+        dialog.setOnKeyListener((dialogInterface, keyCode, event) ->
+                handleRokidKeyEvent(event));
+        return dialog;
     }
 
     /**
@@ -330,6 +353,7 @@ public class DownloadDialog extends DialogFragment
             }
         });
 
+        setupRokidControls();
         fetchStreamsSize();
     }
 
@@ -364,6 +388,9 @@ public class DownloadDialog extends DialogFragment
 
     @Override
     public void onDestroyView() {
+        if (dialogBinding != null && getActivity() != null) {
+            RokidTextInputHelper.hide(requireActivity(), dialogBinding.fileName);
+        }
         dialogBinding = null;
         super.onDestroyView();
     }
@@ -372,6 +399,431 @@ public class DownloadDialog extends DialogFragment
     public void onSaveInstanceState(@NonNull final Bundle outState) {
         super.onSaveInstanceState(outState);
         Bridge.saveInstanceState(this, outState);
+    }
+
+    private boolean handleRokidKeyEvent(@NonNull final KeyEvent event) {
+        if (!RokidMode.enabled() || dialogBinding == null
+                || event.getAction() != KeyEvent.ACTION_DOWN) {
+            return false;
+        }
+        if (RokidKeyboardController.forActivity(requireActivity()).handleKeyEvent(event)) {
+            return true;
+        }
+        if (event.getRepeatCount() > 0 && RokidKeyMapper.isDirectionalKey(event.getKeyCode())) {
+            return true;
+        }
+
+        final RokidKeyMapper.Action action = RokidKeyMapper.map(event);
+        switch (action) {
+            case DUPLICATE:
+                return true;
+            case PREVIOUS:
+                focusRokidControl(-1);
+                return true;
+            case NEXT:
+                focusRokidControl(1);
+                return true;
+            case SELECT:
+                activateSelectedRokidControl();
+                return true;
+            case BACK:
+                return false;
+            default:
+                return false;
+        }
+    }
+
+    private void setupRokidControls() {
+        if (!RokidMode.enabled() || dialogBinding == null) {
+            return;
+        }
+
+        RokidTextInputHelper.prepare(dialogBinding.fileName);
+        dialogBinding.fileName.setOnClickListener(view -> showRokidFileNameKeyboard());
+        dialogBinding.videoAudioGroup.setOnClickListener(view -> cycleRokidMediaType());
+        dialogBinding.threadsLayout.setOnClickListener(view -> cycleRokidThreads());
+        dialogBinding.toolbarLayout.toolbar.setOnClickListener(view -> activateRokidDownload());
+        dialogBinding.threads.setFocusable(false);
+        dialogBinding.threads.setFocusableInTouchMode(false);
+        dialogBinding.threads.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+
+        for (final View view : Arrays.asList(
+                dialogBinding.fileName,
+                dialogBinding.videoAudioGroup,
+                dialogBinding.qualitySpinner,
+                dialogBinding.audioStreamSpinner,
+                dialogBinding.audioTrackSpinner,
+                dialogBinding.threadsLayout,
+                dialogBinding.toolbarLayout.toolbar)) {
+            bindRokidControl(view);
+        }
+
+        dialogBinding.getRoot().post(() -> {
+            updateRokidControls();
+            if (!getRokidControls().isEmpty()) {
+                setRokidSelectedControl(0, true);
+            }
+        });
+    }
+
+    private void bindRokidControl(@NonNull final View view) {
+        RokidAccessibilityActionHelper.bind(view,
+                new RokidAccessibilityActionHelper.ActionListener() {
+            @Override
+            public void onFocused(@NonNull final View focusedView) {
+                selectRokidControl(focusedView);
+            }
+
+            @Override
+            public boolean onClicked(@NonNull final View clickedView) {
+                return activateRokidControl(clickedView);
+            }
+        });
+    }
+
+    private List<View> getRokidControls() {
+        final List<View> controls = new ArrayList<>();
+        if (dialogBinding == null) {
+            return controls;
+        }
+
+        addRokidControl(controls, dialogBinding.fileName);
+        if (!getAvailableMediaButtonIds().isEmpty()) {
+            addRokidControl(controls, dialogBinding.videoAudioGroup);
+        }
+        addRokidSpinnerControl(controls, dialogBinding.qualitySpinner);
+        addRokidSpinnerControl(controls, dialogBinding.audioStreamSpinner);
+        addRokidSpinnerControl(controls, dialogBinding.audioTrackSpinner);
+        if (dialogBinding.threadsLayout.isShown() && dialogBinding.threads.isEnabled()) {
+            controls.add(dialogBinding.threadsLayout);
+        }
+        addRokidControl(controls, dialogBinding.toolbarLayout.toolbar);
+        return controls;
+    }
+
+    private void addRokidControl(
+            @NonNull final List<View> controls,
+            @NonNull final View view
+    ) {
+        if (view.isShown() && view.isEnabled()) {
+            controls.add(view);
+        }
+    }
+
+    private void addRokidSpinnerControl(
+            @NonNull final List<View> controls,
+            @NonNull final AdapterView<?> spinner
+    ) {
+        if (spinner.isShown() && spinner.isEnabled() && spinner.getAdapter() != null
+                && spinner.getAdapter().getCount() > 0) {
+            controls.add(spinner);
+        }
+    }
+
+    private void focusRokidControl(final int offset) {
+        final List<View> controls = getRokidControls();
+        if (controls.isEmpty()) {
+            return;
+        }
+
+        int currentIndex = findRokidControlIndex(requireActivity().getCurrentFocus(), controls);
+        if (currentIndex < 0) {
+            currentIndex = Math.min(Math.max(rokidSelectedControlIndex, 0), controls.size() - 1);
+        }
+        final int targetIndex = (currentIndex + offset + controls.size()) % controls.size();
+        setRokidSelectedControl(targetIndex, true);
+    }
+
+    private void selectRokidControl(@NonNull final View view) {
+        final List<View> controls = getRokidControls();
+        final int index = findRokidControlIndex(view, controls);
+        if (index >= 0) {
+            setRokidSelectedControl(index, false);
+        }
+    }
+
+    private int findRokidControlIndex(
+            @Nullable final View view,
+            @NonNull final List<View> controls
+    ) {
+        if (view == null) {
+            return -1;
+        }
+        for (int i = 0; i < controls.size(); i++) {
+            if (controls.get(i) == view) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private void setRokidSelectedControl(final int index, final boolean requestFocus) {
+        final List<View> controls = getRokidControls();
+        if (controls.isEmpty()) {
+            return;
+        }
+        rokidSelectedControlIndex = Math.min(Math.max(index, 0), controls.size() - 1);
+        for (int i = 0; i < controls.size(); i++) {
+            controls.get(i).setSelected(i == rokidSelectedControlIndex);
+        }
+
+        final View selected = controls.get(rokidSelectedControlIndex);
+        if (requestFocus) {
+            selected.requestFocusFromTouch();
+            selected.requestFocus();
+        }
+        updateRokidControls();
+    }
+
+    private void activateSelectedRokidControl() {
+        final List<View> controls = getRokidControls();
+        if (controls.isEmpty()) {
+            return;
+        }
+        rokidSelectedControlIndex = Math.min(rokidSelectedControlIndex, controls.size() - 1);
+        activateRokidControl(controls.get(rokidSelectedControlIndex));
+    }
+
+    private boolean activateRokidControl(@NonNull final View view) {
+        if (view == dialogBinding.fileName) {
+            showRokidFileNameKeyboard();
+            return true;
+        }
+        if (view == dialogBinding.videoAudioGroup) {
+            cycleRokidMediaType();
+            return true;
+        }
+        if (view == dialogBinding.qualitySpinner) {
+            cycleRokidPrimaryStream();
+            return true;
+        }
+        if (view == dialogBinding.audioStreamSpinner) {
+            cycleRokidSpinner(dialogBinding.audioStreamSpinner);
+            return true;
+        }
+        if (view == dialogBinding.audioTrackSpinner) {
+            cycleRokidSpinner(dialogBinding.audioTrackSpinner);
+            return true;
+        }
+        if (view == dialogBinding.threadsLayout) {
+            cycleRokidThreads();
+            return true;
+        }
+        if (view == dialogBinding.toolbarLayout.toolbar) {
+            activateRokidDownload();
+            return true;
+        }
+        return false;
+    }
+
+    private void showRokidFileNameKeyboard() {
+        RokidTextInputHelper.show(requireActivity(), dialogBinding.fileName, () -> {
+            RokidTextInputHelper.hide(requireActivity(), dialogBinding.fileName);
+            selectRokidControl(dialogBinding.videoAudioGroup);
+        });
+    }
+
+    private void cycleRokidMediaType() {
+        final List<Integer> mediaButtonIds = getAvailableMediaButtonIds();
+        if (mediaButtonIds.isEmpty()) {
+            return;
+        }
+
+        final int checkedId = dialogBinding.videoAudioGroup.getCheckedRadioButtonId();
+        int currentIndex = mediaButtonIds.indexOf(checkedId);
+        if (currentIndex < 0) {
+            currentIndex = 0;
+        } else {
+            currentIndex = (currentIndex + 1) % mediaButtonIds.size();
+        }
+        dialogBinding.videoAudioGroup.check(mediaButtonIds.get(currentIndex));
+        updateRokidControls();
+    }
+
+    @NonNull
+    private List<Integer> getAvailableMediaButtonIds() {
+        final List<Integer> ids = new ArrayList<>();
+        if (dialogBinding == null) {
+            return ids;
+        }
+        if (dialogBinding.videoButton.isShown() && dialogBinding.videoButton.isEnabled()) {
+            ids.add(R.id.video_button);
+        }
+        if (dialogBinding.audioButton.isShown() && dialogBinding.audioButton.isEnabled()) {
+            ids.add(R.id.audio_button);
+        }
+        if (dialogBinding.subtitleButton.isShown() && dialogBinding.subtitleButton.isEnabled()) {
+            ids.add(R.id.subtitle_button);
+        }
+        return ids;
+    }
+
+    private void cycleRokidPrimaryStream() {
+        if (dialogBinding.videoAudioGroup.getCheckedRadioButtonId() == R.id.audio_button) {
+            cycleRokidSpinner(dialogBinding.audioStreamSpinner);
+        } else {
+            cycleRokidSpinner(dialogBinding.qualitySpinner);
+        }
+    }
+
+    private void cycleRokidSpinner(@NonNull final AdapterView<?> spinner) {
+        if (spinner.getAdapter() == null || spinner.getAdapter().getCount() == 0) {
+            return;
+        }
+        final int nextIndex = (spinner.getSelectedItemPosition() + 1)
+                % spinner.getAdapter().getCount();
+        spinner.setSelection(nextIndex);
+        updateRokidControls();
+    }
+
+    private void cycleRokidThreads() {
+        if (!dialogBinding.threads.isEnabled()) {
+            return;
+        }
+        final int nextProgress = dialogBinding.threads.getProgress()
+                >= dialogBinding.threads.getMax()
+                ? 0 : dialogBinding.threads.getProgress() + 1;
+        dialogBinding.threads.setProgress(nextProgress);
+        updateRokidControls();
+    }
+
+    private void activateRokidDownload() {
+        if (okButton != null && okButton.isEnabled()) {
+            prepareSelectedDownload();
+        } else {
+            Toast.makeText(context, R.string.loading_metadata_title, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void updateRokidControls() {
+        if (!RokidMode.enabled() || dialogBinding == null) {
+            return;
+        }
+
+        AccessibilityUtils.describeFocusableItem(dialogBinding.fileName,
+                getString(R.string.rokid_file_name),
+                textOrEmpty(dialogBinding.fileName.getText()),
+                getString(R.string.rokid_tap_to_edit));
+        AccessibilityUtils.describeFocusableItem(dialogBinding.videoAudioGroup,
+                getString(R.string.rokid_media_type),
+                getRokidMediaTypeLabel(),
+                getString(R.string.rokid_tap_to_change));
+        AccessibilityUtils.describeFocusableItem(dialogBinding.qualitySpinner,
+                getString(R.string.rokid_quality),
+                getRokidPrimaryStreamDescription(),
+                getString(R.string.rokid_tap_for_next_option));
+        AccessibilityUtils.describeFocusableItem(dialogBinding.audioStreamSpinner,
+                getString(R.string.rokid_audio_format),
+                getRokidAudioStreamDescription(),
+                getString(R.string.rokid_tap_for_next_option));
+        AccessibilityUtils.describeFocusableItem(dialogBinding.audioTrackSpinner,
+                getString(R.string.audio_track),
+                getRokidAudioTrackDescription(),
+                getString(R.string.rokid_tap_for_next_option));
+        AccessibilityUtils.describeFocusableItem(dialogBinding.threadsLayout,
+                getString(R.string.msg_threads),
+                String.valueOf(dialogBinding.threads.getProgress() + 1),
+                getString(R.string.rokid_tap_for_next_value));
+        AccessibilityUtils.describeFocusableItem(dialogBinding.toolbarLayout.toolbar,
+                okButton != null && okButton.isEnabled()
+                        ? getString(R.string.download)
+                        : getString(R.string.loading_metadata_title));
+    }
+
+    @NonNull
+    private String getRokidMediaTypeLabel() {
+        final int checkedId = dialogBinding.videoAudioGroup.getCheckedRadioButtonId();
+        if (checkedId == R.id.video_button) {
+            return getString(R.string.video);
+        } else if (checkedId == R.id.audio_button) {
+            return getString(R.string.audio);
+        } else if (checkedId == R.id.subtitle_button) {
+            return getString(R.string.caption_setting_title);
+        }
+        return "";
+    }
+
+    @NonNull
+    private String getRokidPrimaryStreamDescription() {
+        final int checkedId = dialogBinding.videoAudioGroup.getCheckedRadioButtonId();
+        if (checkedId == R.id.video_button) {
+            return describeStream(videoStreamsAdapter, wrappedVideoStreams, selectedVideoIndex);
+        } else if (checkedId == R.id.subtitle_button) {
+            return describeStream(subtitleStreamsAdapter, wrappedSubtitleStreams,
+                    selectedSubtitleIndex);
+        } else if (checkedId == R.id.audio_button) {
+            return getRokidAudioStreamDescription();
+        }
+        return "";
+    }
+
+    @NonNull
+    private String getRokidAudioStreamDescription() {
+        return describeStream(audioStreamsAdapter, getWrappedAudioStreams(), selectedAudioIndex);
+    }
+
+    @NonNull
+    private String getRokidAudioTrackDescription() {
+        if (wrappedAudioTracks == null || selectedAudioTrackIndex < 0
+                || selectedAudioTrackIndex >= wrappedAudioTracks.size()) {
+            return "";
+        }
+        final List<AudioStream> streams = wrappedAudioTracks.getTracksList()
+                .get(selectedAudioTrackIndex)
+                .getStreamsList();
+        if (streams.isEmpty()) {
+            return "";
+        }
+        return org.schabi.newpipe.util.Localization.audioTrackName(context, streams.get(0));
+    }
+
+    @NonNull
+    private <T extends Stream, U extends Stream> String describeStream(
+            @Nullable final StreamItemAdapter<T, U> adapter,
+            @Nullable final StreamInfoWrapper<T> wrapper,
+            final int selectedIndex
+    ) {
+        if (adapter == null || wrapper == null || adapter.getCount() == 0
+                || selectedIndex < 0 || selectedIndex >= adapter.getCount()) {
+            return "";
+        }
+
+        final T stream = adapter.getItem(selectedIndex);
+        final MediaFormat mediaFormat = wrapper.getFormat(selectedIndex);
+        final String quality;
+        if (stream instanceof VideoStream) {
+            quality = ((VideoStream) stream).getResolution();
+        } else if (stream instanceof AudioStream) {
+            final int bitrate = ((AudioStream) stream).getAverageBitrate();
+            quality = bitrate > 0 ? bitrate + "kbps" : getString(R.string.unknown_quality);
+        } else if (stream instanceof SubtitlesStream) {
+            quality = ((SubtitlesStream) stream).getDisplayLanguageName();
+        } else {
+            quality = "";
+        }
+
+        final String format = mediaFormat == null
+                ? getString(R.string.unknown_format)
+                : mediaFormat.getName();
+        final String size = wrapper.getSizeInBytes(selectedIndex) > 0
+                ? wrapper.getFormattedSize(selectedIndex) : "";
+        return joinRokidParts(quality, format, size);
+    }
+
+    @NonNull
+    private String joinRokidParts(final String... parts) {
+        final List<String> nonEmptyParts = new ArrayList<>();
+        for (final String part : parts) {
+            if (part != null && !part.trim().isEmpty()) {
+                nonEmptyParts.add(part);
+            }
+        }
+        return String.join(". ", nonEmptyParts);
+    }
+
+    @NonNull
+    private String textOrEmpty(@Nullable final CharSequence text) {
+        return text == null ? "" : text.toString();
     }
 
 
@@ -417,6 +869,7 @@ public class DownloadDialog extends DialogFragment
 
         dialogBinding.audioTrackSpinner.setAdapter(audioTrackAdapter);
         dialogBinding.audioTrackSpinner.setSelection(selectedAudioTrackIndex);
+        updateRokidControls();
     }
 
     private void setupAudioSpinner() {
@@ -432,6 +885,7 @@ public class DownloadDialog extends DialogFragment
         dialogBinding.audioTrackSpinner.setVisibility(
                 wrappedAudioTracks.size() > 1 ? View.VISIBLE : View.GONE);
         dialogBinding.audioTrackPresentInVideoText.setVisibility(View.GONE);
+        updateRokidControls();
     }
 
     private void setupVideoSpinner() {
@@ -445,6 +899,7 @@ public class DownloadDialog extends DialogFragment
         setRadioButtonsState(true);
         dialogBinding.audioStreamSpinner.setVisibility(View.GONE);
         onVideoStreamSelected();
+        updateRokidControls();
     }
 
     private void onVideoStreamSelected() {
@@ -454,6 +909,7 @@ public class DownloadDialog extends DialogFragment
                 isVideoOnly && wrappedAudioTracks.size() > 1 ? View.VISIBLE : View.GONE);
         dialogBinding.audioTrackPresentInVideoText.setVisibility(
                 !isVideoOnly && wrappedAudioTracks.size() > 1 ? View.VISIBLE : View.GONE);
+        updateRokidControls();
     }
 
     private void setupSubtitleSpinner() {
@@ -468,6 +924,7 @@ public class DownloadDialog extends DialogFragment
         dialogBinding.audioStreamSpinner.setVisibility(View.GONE);
         dialogBinding.audioTrackSpinner.setVisibility(View.GONE);
         dialogBinding.audioTrackPresentInVideoText.setVisibility(View.GONE);
+        updateRokidControls();
     }
 
 
@@ -602,6 +1059,7 @@ public class DownloadDialog extends DialogFragment
         } else if (parentId == R.id.audio_stream_spinner) {
             selectedAudioIndex = position;
         }
+        updateRokidControls();
     }
 
     private void onItemSelectedSetFileName() {
@@ -693,6 +1151,7 @@ public class DownloadDialog extends DialogFragment
         dialogBinding.audioButton.setEnabled(enabled);
         dialogBinding.videoButton.setEnabled(enabled);
         dialogBinding.subtitleButton.setEnabled(enabled);
+        updateRokidControls();
     }
 
     private StreamInfoWrapper<AudioStream> getWrappedAudioStreams() {
@@ -737,11 +1196,18 @@ public class DownloadDialog extends DialogFragment
     }
 
     private void showFailedDialog(@StringRes final int msg) {
-        new AlertDialog.Builder(context)
+        showRokidDialog(new AlertDialog.Builder(context)
                 .setTitle(R.string.general_error)
                 .setMessage(msg)
-                .setNegativeButton(getString(R.string.ok), null)
-                .show();
+                .setNegativeButton(getString(R.string.ok), null));
+    }
+
+    private void showRokidDialog(@NonNull final AlertDialog.Builder builder) {
+        final AlertDialog dialog = builder.create();
+        if (getActivity() != null) {
+            RokidDialogNavigationHelper.attach(requireActivity(), dialog);
+        }
+        dialog.show();
     }
 
     private void launchDirectoryPicker(final ActivityResultLauncher<Intent> launcher) {
@@ -851,7 +1317,9 @@ public class DownloadDialog extends DialogFragment
                     ACTION_INTERNAL_STORAGE_SETTINGS);
             if (storageSettingsIntent.resolveActivity(context.getPackageManager())
                     != null) {
-                startActivity(storageSettingsIntent);
+                RokidExternalNavigationHelper.confirmAndOpen(context, storageSettingsIntent,
+                        R.string.settings,
+                        R.string.rokid_storage_settings_message);
             }
             return;
         }
@@ -969,7 +1437,7 @@ public class DownloadDialog extends DialogFragment
                     break;
             }
 
-            askDialog.show();
+            showRokidDialog(askDialog);
             return;
         }
 
@@ -1013,7 +1481,7 @@ public class DownloadDialog extends DialogFragment
             }
         });
 
-        askDialog.show();
+        showRokidDialog(askDialog);
     }
 
     private void continueSelectedDownload(@NonNull final StoredFileHelper storage) {

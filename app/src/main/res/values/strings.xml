@@ -17,6 +17,13 @@
     <string name="download">Download</string>
     <string name="controls_download_desc">Download stream file</string>
     <string name="search">Search</string>
+    <string name="voice_search">Voice search</string>
+    <string name="voice_search_listening">Listening...</string>
+    <string name="voice_search_failed">Voice search failed</string>
+    <string name="voice_search_no_result">No voice result heard</string>
+    <string name="voice_search_unavailable">Voice search is not available on this device</string>
+    <string name="search_suggestion_query">Search for %s</string>
+    <string name="search_suggestion_insert">Insert %s into search box</string>
     <string name="search_with_service_name">Search %1$s</string>
     <string name="search_with_service_name_and_filter">Search %1$s (%2$s)</string>
     <string name="settings">Settings</string>
@@ -65,6 +72,8 @@
     <string name="notification_actions_summary">Edit each notification action below by tapping on it. Select up to three of them to be shown in the compact notification by using the checkboxes on the right.</string>
     <string name="notification_actions_summary_android13">Edit each notification action below by tapping on it. The first three actions (play/pause, previous and next) are set by the system and cannot be customized.</string>
     <string name="notification_actions_at_most_three">You can select at most three actions to show in the compact notification!</string>
+    <string name="notification_action_choose_accessibility">Choose notification action</string>
+    <string name="notification_action_compact_accessibility">Show in compact notification</string>
     <string name="notification_action_repeat">Repeat</string>
     <string name="notification_action_shuffle">Shuffle</string>
     <string name="notification_action_buffering">Buffering</string>
@@ -289,6 +298,7 @@
     <string name="video">Video</string>
     <string name="audio">Audio</string>
     <string name="retry">Retry</string>
+    <string name="rokid_play_video_action">Play video</string>
     <string name="short_thousand">%sK</string>
     <string name="short_million">%sM</string>
     <string name="short_billion">%sB</string>
@@ -433,6 +443,7 @@
     <string name="play_queue_stream_detail">Details</string>
     <string name="play_queue_audio_settings">Audio Settings</string>
     <string name="play_queue_audio_track">Audio: %s</string>
+    <string name="play_queue_scroll_current">Scroll to current item</string>
     <string name="audio_track">Audio track</string>
     <string name="hold_to_append">Hold to enqueue</string>
     <string name="show_channel_details">Show channel details</string>
@@ -863,6 +874,51 @@
     <string name="rokid_seek_backward_static">-10s</string>
     <string name="rokid_seek_forward_static">+10s</string>
     <string name="rokid_wifi_settings">Wi-Fi</string>
+    <string name="rokid_open_android_settings">Open settings</string>
+    <string name="rokid_wifi_settings_message">This opens Android Wi-Fi settings outside NewPipe. Use Back to return.</string>
+    <string name="rokid_notification_settings_message">This opens Android notification settings outside NewPipe. Use Back to return.</string>
+    <string name="rokid_caption_settings_message">This opens Android caption settings outside NewPipe. Use Back to return.</string>
+    <string name="rokid_sound_settings_message">This opens Android sound settings outside NewPipe. Use Back to return.</string>
+    <string name="rokid_storage_settings_message">This opens Android storage settings outside NewPipe. Use Back to return.</string>
+    <string name="rokid_overlay_settings_message">This opens Android overlay permission settings outside NewPipe. Use Back to return.</string>
+    <string name="rokid_system_file_picker_title">Open Android file picker?</string>
+    <string name="rokid_system_file_picker_message">This opens Android file selection outside NewPipe. Use Back to return.</string>
+    <string name="rokid_open_system_picker">Open picker</string>
+    <string name="rokid_keyboard_text_empty">Text empty</string>
+    <string name="rokid_keyboard_text">Text %s</string>
+    <string name="rokid_keyboard_display_space">spc</string>
+    <string name="rokid_keyboard_display_delete">del</string>
+    <string name="rokid_keyboard_display_clear">clear</string>
+    <string name="rokid_keyboard_display_voice">voice</string>
+    <string name="rokid_keyboard_selected_key">Selected %s</string>
+    <string name="rokid_keyboard_letter_key">Key %s</string>
+    <string name="rokid_keyboard_key_space">Space</string>
+    <string name="rokid_keyboard_key_delete">Delete</string>
+    <string name="rokid_keyboard_key_clear_text">Clear text</string>
+    <string name="rokid_keyboard_key_voice_search">Voice search</string>
+    <string name="rokid_keyboard_key_numbers_symbols">Numbers and symbols</string>
+    <string name="rokid_keyboard_key_letters">Letters</string>
+    <string name="rokid_keyboard_key_dot">Dot</string>
+    <string name="rokid_keyboard_key_dash">Dash</string>
+    <string name="rokid_keyboard_key_underscore">Underscore</string>
+    <string name="rokid_keyboard_key_at_sign">At sign</string>
+    <string name="rokid_keyboard_key_slash">Slash</string>
+    <string name="rokid_keyboard_key_colon">Colon</string>
+    <string name="rokid_keyboard_key_hash">Hash</string>
+    <string name="rokid_keyboard_key_plus">Plus</string>
+    <string name="rokid_file_name">File name</string>
+    <string name="rokid_media_type">Media type</string>
+    <string name="rokid_quality">Quality</string>
+    <string name="rokid_audio_format">Audio format</string>
+    <string name="rokid_tap_to_edit">Tap to edit</string>
+    <string name="rokid_tap_to_change">Tap to change</string>
+    <string name="rokid_tap_for_next_option">Tap for next option</string>
+    <string name="rokid_tap_for_next_value">Tap for next value</string>
+    <string name="rokid_decrease">Decrease</string>
+    <string name="rokid_increase">Increase</string>
+    <string name="rokid_change_mode">Change mode</string>
+    <string name="rokid_selected">Selected</string>
+    <string name="rokid_move_down">Move down</string>
     <string name="rokid_home_videos" translatable="false">Videos</string>
     <string name="rokid_home_live" translatable="false">Live</string>
     <string name="rokid_player_actions" translatable="false">Player actions</string>
@@ -874,6 +930,7 @@
     <string name="rokid_player_speed" translatable="false">Speed</string>
     <string name="rokid_player_subtitles" translatable="false">Subs</string>
     <string name="rokid_player_close" translatable="false">Close</string>
+    <string name="rokid_accessibility_select" translatable="false">Select</string>
     <string name="replay">Replay</string>
     <string name="more_options">More options</string>
     <string name="duration">Duration</string>

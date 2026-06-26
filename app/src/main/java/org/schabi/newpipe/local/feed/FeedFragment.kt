@@ -76,6 +76,7 @@ import org.schabi.newpipe.ktx.slideUp
 import org.schabi.newpipe.local.feed.item.StreamItem
 import org.schabi.newpipe.local.feed.service.FeedLoadService
 import org.schabi.newpipe.local.subscription.SubscriptionManager
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper
 import org.schabi.newpipe.util.DeviceUtils
 import org.schabi.newpipe.util.Localization
 import org.schabi.newpipe.util.NavigationHelper
@@ -225,15 +226,17 @@ class FeedFragment : BaseStateFragment<FeedState>() {
                 else -> R.string.feed_use_dedicated_fetch_method_enable_button
             }
 
-            AlertDialog.Builder(requireContext())
-                .setMessage(R.string.feed_use_dedicated_fetch_method_help_text)
-                .setNeutralButton(enableDisableButtonText) { _, _ ->
-                    sharedPreferences.edit {
-                        putBoolean(getString(R.string.feed_use_dedicated_fetch_method_key), !usingDedicatedMethod)
+            RokidDialogNavigationHelper.show(
+                requireContext(),
+                AlertDialog.Builder(requireContext())
+                    .setMessage(R.string.feed_use_dedicated_fetch_method_help_text)
+                    .setNeutralButton(enableDisableButtonText) { _, _ ->
+                        sharedPreferences.edit {
+                            putBoolean(getString(R.string.feed_use_dedicated_fetch_method_key), !usingDedicatedMethod)
+                        }
                     }
-                }
-                .setPositiveButton(resources.getString(R.string.ok), null)
-                .show()
+                    .setPositiveButton(resources.getString(R.string.ok), null)
+            )
             return true
         } else if (item.itemId == R.id.menu_item_feed_toggle_played_items) {
             showStreamVisibilityDialog()
@@ -255,18 +258,20 @@ class FeedFragment : BaseStateFragment<FeedState>() {
             viewModel.getShowFutureItemsFromPreferences()
         )
 
-        AlertDialog.Builder(requireContext())
-            .setTitle(R.string.feed_hide_streams_title)
-            .setMultiChoiceItems(dialogItems, checkedDialogItems) { _, which, isChecked ->
-                checkedDialogItems[which] = isChecked
-            }
-            .setPositiveButton(R.string.ok) { _, _ ->
-                viewModel.setSaveShowPlayedItems(checkedDialogItems[0])
-                viewModel.setSaveShowPartiallyPlayedItems(checkedDialogItems[1])
-                viewModel.setSaveShowFutureItems(checkedDialogItems[2])
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        RokidDialogNavigationHelper.show(
+            requireContext(),
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.feed_hide_streams_title)
+                .setMultiChoiceItems(dialogItems, checkedDialogItems) { _, which, isChecked ->
+                    checkedDialogItems[which] = isChecked
+                }
+                .setPositiveButton(R.string.ok) { _, _ ->
+                    viewModel.setSaveShowPlayedItems(checkedDialogItems[0])
+                    viewModel.setSaveShowPartiallyPlayedItems(checkedDialogItems[1])
+                    viewModel.setSaveShowFutureItems(checkedDialogItems[2])
+                }
+                .setNegativeButton(R.string.cancel, null)
+        )
     }
 
     override fun onDestroyOptionsMenu() {
@@ -536,8 +541,7 @@ class FeedFragment : BaseStateFragment<FeedState>() {
                 message += "\n" + cause.message
             }
         }
-        builder.setMessage(message)
-            .show()
+        RokidDialogNavigationHelper.show(requireContext(), builder.setMessage(message))
     }
 
     private fun updateRelativeTimeViews() {

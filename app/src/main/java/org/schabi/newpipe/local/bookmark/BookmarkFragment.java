@@ -39,6 +39,9 @@ import org.schabi.newpipe.local.holder.LocalBookmarkPlaylistItemHolder;
 import org.schabi.newpipe.local.holder.RemoteBookmarkPlaylistItemHolder;
 import org.schabi.newpipe.local.playlist.LocalPlaylistManager;
 import org.schabi.newpipe.local.playlist.RemotePlaylistManager;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
+import org.schabi.newpipe.rokid.RokidMode;
+import org.schabi.newpipe.rokid.RokidTextInputHelper;
 import org.schabi.newpipe.util.NavigationHelper;
 import org.schabi.newpipe.util.OnClickGesture;
 import org.schabi.newpipe.util.debounce.DebounceSavable;
@@ -165,6 +168,10 @@ public final class BookmarkFragment extends BaseLocalListFragment<List<PlaylistL
             @Override
             public void drag(final LocalItem selectedItem,
                              final RecyclerView.ViewHolder viewHolder) {
+                if (RokidMode.enabled()) {
+                    moveBookmarkItemDown(viewHolder.getBindingAdapterPosition());
+                    return;
+                }
                 if (itemTouchHelper != null) {
                     itemTouchHelper.startDrag(viewHolder);
                 }
@@ -417,6 +424,15 @@ public final class BookmarkFragment extends BaseLocalListFragment<List<PlaylistL
 
     }
 
+    private void moveBookmarkItemDown(final int adapterPosition) {
+        if (itemListAdapter == null || debounceSaver == null
+                || !itemListAdapter.moveItemDown(adapterPosition)) {
+            return;
+        }
+        debounceSaver.setHasChangesToSave();
+        saveImmediate();
+    }
+
     private ItemTouchHelper.SimpleCallback getItemTouchCallback() {
         int directions = ItemTouchHelper.UP | ItemTouchHelper.DOWN;
         if (shouldUseGridLayout(requireContext())) {
@@ -521,9 +537,9 @@ public final class BookmarkFragment extends BaseLocalListFragment<List<PlaylistL
             }
         };
 
-        new AlertDialog.Builder(activity)
+        RokidDialogNavigationHelper.show(activity, new AlertDialog.Builder(activity)
                 .setItems(items.toArray(new String[0]), action)
-                .show();
+        );
     }
 
     private void showRenameDialog(final PlaylistMetadataEntry selectedItem) {
@@ -533,14 +549,16 @@ public final class BookmarkFragment extends BaseLocalListFragment<List<PlaylistL
         dialogBinding.dialogEditText.setInputType(InputType.TYPE_CLASS_TEXT);
         dialogBinding.dialogEditText.setText(selectedItem.getOrderingName());
 
-        new AlertDialog.Builder(activity)
+        final AlertDialog dialog = new AlertDialog.Builder(activity)
                 .setView(dialogBinding.getRoot())
-                .setPositiveButton(R.string.rename_playlist, (dialog, which) ->
+                .setPositiveButton(R.string.rename_playlist, (dialogInterface, which) ->
                         changeLocalPlaylistName(
                                 selectedItem.getUid(),
                                 dialogBinding.dialogEditText.getText().toString()))
                 .setNegativeButton(R.string.cancel, null)
-                .show();
+                .create();
+        RokidTextInputHelper.attach(activity, dialog, dialogBinding.dialogEditText);
+        dialog.show();
     }
 
     private void showDeleteDialog(final String name, final PlaylistLocalItem item) {
@@ -548,12 +566,11 @@ public final class BookmarkFragment extends BaseLocalListFragment<List<PlaylistL
             return;
         }
 
-        new AlertDialog.Builder(activity)
+        RokidDialogNavigationHelper.show(activity, new AlertDialog.Builder(activity)
                 .setTitle(name)
                 .setMessage(R.string.delete_playlist_prompt)
                 .setCancelable(true)
                 .setPositiveButton(R.string.delete, (dialog, i) -> deleteItem(item))
-                .setNegativeButton(R.string.cancel, null)
-                .show();
+                .setNegativeButton(R.string.cancel, null));
     }
 }

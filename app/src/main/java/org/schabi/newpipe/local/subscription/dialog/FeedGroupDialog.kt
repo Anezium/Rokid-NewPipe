@@ -39,6 +39,9 @@ import org.schabi.newpipe.local.subscription.dialog.FeedGroupDialogViewModel.Dia
 import org.schabi.newpipe.local.subscription.item.ImportSubscriptionsHintPlaceholderItem
 import org.schabi.newpipe.local.subscription.item.PickerIconItem
 import org.schabi.newpipe.local.subscription.item.PickerSubscriptionItem
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper
+import org.schabi.newpipe.rokid.RokidMode
+import org.schabi.newpipe.rokid.RokidTextInputHelper
 import org.schabi.newpipe.util.DeviceUtils
 import org.schabi.newpipe.util.ThemeHelper
 
@@ -124,6 +127,8 @@ class FeedGroupDialog : DialogFragment(), BackPressable {
                     super.onBackPressed()
                 }
             }
+        }.also { dialog ->
+            RokidDialogNavigationHelper.attach(requireActivity(), dialog)
         }
     }
 
@@ -200,6 +205,11 @@ class FeedGroupDialog : DialogFragment(), BackPressable {
     }
 
     override fun onDestroyView() {
+        if (RokidMode.enabled()) {
+            RokidTextInputHelper.hide(requireActivity(), feedGroupCreateBinding.groupNameInput)
+            RokidTextInputHelper.hide(requireActivity(), searchLayoutBinding.toolbarSearchEditText)
+        }
+
         super.onDestroyView()
         feedGroupCreateBinding.subscriptionsSelectorList.adapter = null
         feedGroupCreateBinding.iconSelector.adapter = null
@@ -240,6 +250,11 @@ class FeedGroupDialog : DialogFragment(), BackPressable {
                 feedGroupCreateBinding.groupNameInputContainer.error = null
             }
         }
+        feedGroupCreateBinding.groupNameInput.setOnClickListener {
+            if (RokidMode.enabled()) {
+                showKeyboard()
+            }
+        }
 
         feedGroupCreateBinding.confirmButton.setOnClickListener { handlePositiveButton() }
 
@@ -276,7 +291,7 @@ class FeedGroupDialog : DialogFragment(), BackPressable {
         }
 
         searchLayoutBinding.toolbarSearchEditText.setOnClickListener {
-            if (DeviceUtils.isTv(context)) {
+            if (DeviceUtils.isTv(context) || RokidMode.enabled()) {
                 showKeyboardSearch()
             }
         }
@@ -495,6 +510,15 @@ class FeedGroupDialog : DialogFragment(), BackPressable {
     }
 
     private fun showKeyboardSearch() {
+        if (RokidMode.enabled()) {
+            RokidTextInputHelper.show(
+                requireActivity(),
+                searchLayoutBinding.toolbarSearchEditText,
+                { hideKeyboardSearch() },
+                getString(R.string.search)
+            )
+            return
+        }
         if (searchLayoutBinding.toolbarSearchEditText.requestFocus()) {
             inputMethodManager.showSoftInput(
                 searchLayoutBinding.toolbarSearchEditText,
@@ -504,6 +528,11 @@ class FeedGroupDialog : DialogFragment(), BackPressable {
     }
 
     private fun hideKeyboardSearch() {
+        if (RokidMode.enabled()) {
+            RokidTextInputHelper.hide(requireActivity(), searchLayoutBinding.toolbarSearchEditText)
+            searchLayoutBinding.toolbarSearchEditText.clearFocus()
+            return
+        }
         inputMethodManager.hideSoftInputFromWindow(
             searchLayoutBinding.toolbarSearchEditText.windowToken,
             InputMethodManager.HIDE_NOT_ALWAYS
@@ -512,6 +541,13 @@ class FeedGroupDialog : DialogFragment(), BackPressable {
     }
 
     private fun showKeyboard() {
+        if (RokidMode.enabled()) {
+            RokidTextInputHelper.show(requireActivity(), feedGroupCreateBinding.groupNameInput) {
+                hideKeyboard()
+                feedGroupCreateBinding.selectChannelButton.requestFocus()
+            }
+            return
+        }
         if (feedGroupCreateBinding.groupNameInput.requestFocus()) {
             inputMethodManager.showSoftInput(
                 feedGroupCreateBinding.groupNameInput,
@@ -521,6 +557,11 @@ class FeedGroupDialog : DialogFragment(), BackPressable {
     }
 
     private fun hideKeyboard() {
+        if (RokidMode.enabled()) {
+            RokidTextInputHelper.hide(requireActivity(), feedGroupCreateBinding.groupNameInput)
+            feedGroupCreateBinding.groupNameInput.clearFocus()
+            return
+        }
         inputMethodManager.hideSoftInputFromWindow(
             feedGroupCreateBinding.groupNameInput.windowToken,
             InputMethodManager.HIDE_NOT_ALWAYS

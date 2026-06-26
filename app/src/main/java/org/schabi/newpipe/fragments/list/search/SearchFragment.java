@@ -6,11 +6,16 @@ import static org.schabi.newpipe.ktx.ViewUtils.animate;
 import static org.schabi.newpipe.util.ExtractorHelper.showMetaInfoInTextView;
 import static java.util.Arrays.asList;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.text.Editable;
 import android.text.Html;
 import android.text.TextUtils;
@@ -28,6 +33,7 @@ import android.view.animation.DecelerateInterpolator;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -35,6 +41,7 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.TooltipCompat;
 import androidx.collection.SparseArrayCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.text.HtmlCompat;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.ItemTouchHelper;
@@ -64,6 +71,7 @@ import org.schabi.newpipe.fragments.list.BaseListFragment;
 import org.schabi.newpipe.ktx.AnimationType;
 import org.schabi.newpipe.ktx.ExceptionUtils;
 import org.schabi.newpipe.local.history.HistoryRecordManager;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
 import org.schabi.newpipe.rokid.RokidKeyboardController;
 import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.settings.NewPipeSettings;
@@ -107,6 +115,7 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
      * to fetch/show the suggestions, in milliseconds.
      */
     private static final int SUGGESTIONS_DEBOUNCE = 120; //ms
+    private static final int VOICE_SEARCH_PERMISSION_REQUEST_CODE = 4021;
     private final PublishSubject<String> suggestionPublisher = PublishSubject.create();
 
     @State
@@ -168,8 +177,14 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
     private View searchToolbarContainer;
     private EditText searchEditText;
     private View searchClear;
+    @Nullable
+    private SpeechRecognizer searchSpeechRecognizer;
+    @Nullable
+    private CharSequence searchHintBeforeVoice;
 
     private boolean suggestionsPanelVisible = false;
+    private boolean pendingVoiceSearch = false;
+    private boolean voiceSearchListening = false;
 
     /*////////////////////////////////////////////////////////////////////////*/
 
@@ -267,6 +282,7 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
             suggestionDisposable.dispose();
         }
         disposables.clear();
+        cancelVoiceSearch();
         hideKeyboardSearch();
     }
 
@@ -318,6 +334,7 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
             Log.d(TAG, "onDestroyView() called");
         }
         hideKeyboardSearch();
+        destroyVoiceSearchRecognizer();
         unsetSearchListeners();
 
         searchBinding = null;
@@ -334,6 +351,28 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
             suggestionDisposable.dispose();
         }
         disposables.clear();
+        destroyVoiceSearchRecognizer();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(final int requestCode,
+                                           @NonNull final String[] permissions,
+                                           @NonNull final int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode != VOICE_SEARCH_PERMISSION_REQUEST_CODE) {
+            return;
+        }
+
+        final boolean permissionGranted = grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+        if (permissionGranted && pendingVoiceSearch) {
+            pendingVoiceSearch = false;
+            startVoiceSearch();
+        } else {
+            pendingVoiceSearch = false;
+            Toast.makeText(activity, R.string.permission_denied, Toast.LENGTH_SHORT).show();
+            showKeyboardSearch();
+        }
     }
 
     @Override
@@ -708,10 +747,13 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
                 RokidKeyboardController.hideAll(activity);
                 return;
             }
-            RokidKeyboardController.forActivity(activity).show(searchEditText, () -> {
-                searchEditText.setText(getSearchEditString().trim());
-                search(getSearchEditString(), new String[0], "");
-            });
+            RokidKeyboardController.forActivity(activity).show(
+                    searchEditText,
+                    () -> {
+                        searchEditText.setText(getSearchEditString().trim());
+                        search(getSearchEditString(), new String[0], "");
+                    },
+                    this::startVoiceSearch);
             return;
         }
         KeyboardUtil.showKeyboard(activity, searchEditText);
@@ -737,12 +779,157 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
         return searchBinding.getRoot().isShown() && searchToolbarContainer.isShown();
     }
 
+    private void startVoiceSearch() {
+        if (activity == null || searchEditText == null) {
+            return;
+        }
+        if (!SpeechRecognizer.isRecognitionAvailable(activity)) {
+            Toast.makeText(activity, R.string.voice_search_unavailable, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            pendingVoiceSearch = true;
+            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},
+                    VOICE_SEARCH_PERMISSION_REQUEST_CODE);
+            return;
+        }
+
+        pendingVoiceSearch = false;
+        hideKeyboardSearch();
+        hideSuggestionsPanel();
+        ensureVoiceSearchRecognizer();
+
+        final Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+        intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
+
+        try {
+            searchHintBeforeVoice = searchEditText.getHint();
+            searchEditText.setHint(R.string.voice_search_listening);
+            voiceSearchListening = true;
+            searchSpeechRecognizer.startListening(intent);
+        } catch (final RuntimeException e) {
+            Log.w(TAG, "Unable to start voice search", e);
+            finishVoiceSearchListening();
+            destroyVoiceSearchRecognizer();
+            Toast.makeText(activity, R.string.voice_search_failed, Toast.LENGTH_SHORT).show();
+            showKeyboardSearch();
+        }
+    }
+
+    private void ensureVoiceSearchRecognizer() {
+        if (searchSpeechRecognizer != null) {
+            return;
+        }
+        searchSpeechRecognizer = SpeechRecognizer.createSpeechRecognizer(activity);
+        searchSpeechRecognizer.setRecognitionListener(new RecognitionListener() {
+            @Override
+            public void onReadyForSpeech(final Bundle params) {
+                // No-op; the search box hint already shows the listening state.
+            }
+
+            @Override
+            public void onBeginningOfSpeech() {
+                // No-op.
+            }
+
+            @Override
+            public void onRmsChanged(final float rmsdB) {
+                // No-op.
+            }
+
+            @Override
+            public void onBufferReceived(final byte[] buffer) {
+                // No-op.
+            }
+
+            @Override
+            public void onEndOfSpeech() {
+                // Wait for final results or an error before leaving voice-search mode.
+            }
+
+            @Override
+            public void onError(final int error) {
+                finishVoiceSearchListening();
+                if (error == SpeechRecognizer.ERROR_NO_MATCH
+                        || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
+                    Toast.makeText(activity, R.string.voice_search_no_result,
+                            Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(activity, R.string.voice_search_failed,
+                            Toast.LENGTH_SHORT).show();
+                }
+                showKeyboardSearch();
+            }
+
+            @Override
+            public void onResults(final Bundle results) {
+                finishVoiceSearchListening();
+                final ArrayList<String> matches =
+                        results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                if (matches == null || matches.isEmpty() || TextUtils.isEmpty(matches.get(0))) {
+                    Toast.makeText(activity, R.string.voice_search_no_result,
+                            Toast.LENGTH_SHORT).show();
+                    showKeyboardSearch();
+                    return;
+                }
+
+                final String voiceQuery = matches.get(0).trim();
+                searchEditText.setText(voiceQuery);
+                searchEditText.setSelection(voiceQuery.length());
+                search(voiceQuery, contentFilter, sortFilter);
+            }
+
+            @Override
+            public void onPartialResults(final Bundle partialResults) {
+                // No-op; only final results should launch a search.
+            }
+
+            @Override
+            public void onEvent(final int eventType, final Bundle params) {
+                // No-op.
+            }
+        });
+    }
+
+    private void finishVoiceSearchListening() {
+        voiceSearchListening = false;
+        if (searchEditText != null && searchHintBeforeVoice != null) {
+            searchEditText.setHint(searchHintBeforeVoice);
+        }
+        searchHintBeforeVoice = null;
+    }
+
+    private void cancelVoiceSearch() {
+        pendingVoiceSearch = false;
+        if (searchSpeechRecognizer != null) {
+            searchSpeechRecognizer.setRecognitionListener(null);
+            if (voiceSearchListening) {
+                searchSpeechRecognizer.cancel();
+            }
+            searchSpeechRecognizer.destroy();
+            searchSpeechRecognizer = null;
+        }
+        finishVoiceSearchListening();
+    }
+
+    private void destroyVoiceSearchRecognizer() {
+        if (searchSpeechRecognizer != null) {
+            searchSpeechRecognizer.destroy();
+            searchSpeechRecognizer = null;
+        }
+        finishVoiceSearchListening();
+    }
+
     private void showDeleteSuggestionDialog(final SuggestionItem item) {
         if (activity == null || historyRecordManager == null || searchEditText == null) {
             return;
         }
         final String query = item.query;
-        new AlertDialog.Builder(activity)
+        RokidDialogNavigationHelper.show(activity, new AlertDialog.Builder(activity)
                 .setTitle(query)
                 .setMessage(R.string.delete_item_search_history)
                 .setCancelable(true)
@@ -757,12 +944,16 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
                                             UserAction.DELETE_FROM_HISTORY,
                                             "Deleting item failed")));
                     disposables.add(onDelete);
-                })
-                .show();
+                }));
     }
 
     @Override
     public boolean onBackPressed() {
+        if (voiceSearchListening || pendingVoiceSearch) {
+            cancelVoiceSearch();
+            showKeyboardSearch();
+            return true;
+        }
         if (suggestionsPanelVisible
                 && !infoListAdapter.getItemsList().isEmpty()
                 && !isLoading.get()) {

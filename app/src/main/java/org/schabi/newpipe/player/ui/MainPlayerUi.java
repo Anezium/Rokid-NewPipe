@@ -294,6 +294,12 @@ public final class MainPlayerUi extends VideoPlayerUi implements View.OnLayoutCh
         // down in fullscreen mode (just larger area to make easy to locate by finger)
         binding.topControls.setClickable(true);
         binding.topControls.setFocusable(true);
+        if (RokidMode.enabled()) {
+            binding.topControls.setClickable(false);
+            binding.topControls.setFocusable(false);
+            binding.topControls.setFocusableInTouchMode(false);
+            binding.topControls.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        }
 
         binding.metadataView.setVisibility(isFullscreen ? View.VISIBLE : View.GONE);
 
@@ -631,8 +637,13 @@ public final class MainPlayerUi extends VideoPlayerUi implements View.OnLayoutCh
 
     private void buildQueue() {
         binding.itemsList.setAdapter(playQueueAdapter);
-        binding.itemsList.setClickable(true);
-        binding.itemsList.setLongClickable(true);
+        binding.itemsList.setClickable(!RokidMode.enabled());
+        binding.itemsList.setLongClickable(!RokidMode.enabled());
+        if (RokidMode.enabled()) {
+            binding.itemsList.setFocusable(false);
+            binding.itemsList.setFocusableInTouchMode(false);
+            binding.itemsList.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        }
 
         binding.itemsList.clearOnScrollListeners();
         binding.itemsList.addOnScrollListener(getQueueScrollListener());
@@ -670,8 +681,13 @@ public final class MainPlayerUi extends VideoPlayerUi implements View.OnLayoutCh
 
     private void buildSegments() {
         binding.itemsList.setAdapter(segmentAdapter);
-        binding.itemsList.setClickable(true);
-        binding.itemsList.setLongClickable(true);
+        binding.itemsList.setClickable(!RokidMode.enabled());
+        binding.itemsList.setLongClickable(!RokidMode.enabled());
+        if (RokidMode.enabled()) {
+            binding.itemsList.setFocusable(false);
+            binding.itemsList.setFocusableInTouchMode(false);
+            binding.itemsList.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        }
 
         binding.itemsList.clearOnScrollListeners();
         if (itemTouchHelper != null) {
@@ -804,11 +820,25 @@ public final class MainPlayerUi extends VideoPlayerUi implements View.OnLayoutCh
 
             @Override
             public void onStartDrag(final PlayQueueItemHolder viewHolder) {
+                if (RokidMode.enabled()) {
+                    moveQueueItemDown(viewHolder.getBindingAdapterPosition());
+                    return;
+                }
                 if (itemTouchHelper != null) {
                     itemTouchHelper.startDrag(viewHolder);
                 }
             }
         };
+    }
+
+    private void moveQueueItemDown(final int sourceIndex) {
+        @Nullable final PlayQueue playQueue = player.getPlayQueue();
+        if (playQueue == null || sourceIndex < 0
+                || sourceIndex >= playQueue.size() || playQueue.size() < 2) {
+            return;
+        }
+        final int targetIndex = sourceIndex == playQueue.size() - 1 ? 0 : sourceIndex + 1;
+        playQueue.move(sourceIndex, targetIndex);
     }
 
     private void updateQueueTime(final int currentTime) {
@@ -857,9 +887,7 @@ public final class MainPlayerUi extends VideoPlayerUi implements View.OnLayoutCh
 
     @Override
     protected void onPlaybackSpeedClicked() {
-        if (RokidMode.enabled()) {
-            playbackSpeedPopupMenu.show();
-            isSomePopupMenuVisible = true;
+        if (showRokidPlaybackSpeedMenu()) {
             return;
         }
 

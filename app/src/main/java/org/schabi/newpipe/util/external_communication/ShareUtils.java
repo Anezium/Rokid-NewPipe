@@ -3,12 +3,16 @@ package org.schabi.newpipe.util.external_communication;
 import static org.schabi.newpipe.MainActivity.DEBUG;
 import static coil3.Image_androidKt.toBitmap;
 
+import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -19,6 +23,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
@@ -26,9 +31,12 @@ import org.schabi.newpipe.BuildConfig;
 import org.schabi.newpipe.R;
 import org.schabi.newpipe.RouterActivity;
 import org.schabi.newpipe.extractor.Image;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
+import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.util.image.ImageStrategy;
 
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -92,6 +100,9 @@ public final class ShareUtils {
 
         // See https://stackoverflow.com/a/58801285 and `setSelector` documentation
         intent.setSelector(browserIntent);
+        if (tryOpenRokidResolvedIntent(context, intent, true)) {
+            return;
+        }
         try {
             context.startActivity(intent);
         } catch (final ActivityNotFoundException e) {
@@ -129,6 +140,9 @@ public final class ShareUtils {
      */
     public static boolean tryOpenIntentInApp(@NonNull final Context context,
                                              @NonNull final Intent intent) {
+        if (tryOpenRokidResolvedIntent(context, intent, true)) {
+            return true;
+        }
         try {
             context.startActivity(intent);
         } catch (final ActivityNotFoundException e) {
@@ -154,6 +168,12 @@ public final class ShareUtils {
         }
     }
 
+    public static void openIntentChooser(@NonNull final Context context,
+                                         @NonNull final Intent intent,
+                                         final boolean setTitleChooser) {
+        openAppChooser(context, intent, setTitleChooser);
+    }
+
     /**
      * Open the system chooser to launch an intent.
      * <p>
@@ -171,6 +191,10 @@ public final class ShareUtils {
     private static void openAppChooser(@NonNull final Context context,
                                        @NonNull final Intent intent,
                                        final boolean setTitleChooser) {
+        if (tryOpenRokidResolvedIntent(context, intent, setTitleChooser)) {
+            return;
+        }
+
         final Intent chooserIntent = new Intent(Intent.ACTION_CHOOSER);
         chooserIntent.putExtra(Intent.EXTRA_INTENT, intent);
         chooserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -215,6 +239,98 @@ public final class ShareUtils {
 
         try {
             context.startActivity(chooserIntent);
+        } catch (final ActivityNotFoundException e) {
+            Toast.makeText(context, R.string.no_app_to_open_intent, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private static boolean tryOpenRokidResolvedIntent(@NonNull final Context context,
+                                                      @NonNull final Intent intent,
+                                                      final boolean setTitleChooser) {
+        return RokidMode.enabled() && showRokidAppChooser(context, intent, setTitleChooser);
+    }
+
+    private static boolean showRokidAppChooser(@NonNull final Context context,
+                                               @NonNull final Intent intent,
+                                               final boolean setTitleChooser) {
+        if (!hasActivityContext(context)) {
+            return false;
+        }
+
+        final PackageManager packageManager = context.getPackageManager();
+        final List<ResolveInfo> options = getRokidChooserOptions(context, intent, packageManager);
+        if (options.isEmpty()) {
+            return false;
+        }
+        if (options.size() == 1) {
+            startResolvedIntent(context, intent, options.get(0));
+            return true;
+        }
+
+        final CharSequence[] labels = new CharSequence[options.size()];
+        for (int i = 0; i < options.size(); i++) {
+            final ResolveInfo option = options.get(i);
+            final CharSequence label = option.loadLabel(packageManager);
+            labels[i] = TextUtils.isEmpty(label) ? option.activityInfo.packageName : label;
+        }
+
+        final int title = setTitleChooser ? R.string.open_with : R.string.share_dialog_title;
+        RokidDialogNavigationHelper.show(context, new AlertDialog.Builder(context)
+                .setTitle(title)
+                .setItems(labels, (dialog, which) ->
+                        startResolvedIntent(context, intent, options.get(which))));
+        return true;
+    }
+
+    private static boolean hasActivityContext(@NonNull final Context context) {
+        Context current = context;
+        while (current instanceof ContextWrapper) {
+            if (current instanceof Activity) {
+                return true;
+            }
+            current = ((ContextWrapper) current).getBaseContext();
+        }
+        return false;
+    }
+
+    @SuppressWarnings("deprecation")
+    @NonNull
+    private static List<ResolveInfo> getRokidChooserOptions(
+            @NonNull final Context context,
+            @NonNull final Intent intent,
+            @NonNull final PackageManager packageManager
+    ) {
+        final List<ResolveInfo> resolved =
+                packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
+        final ComponentName routerComponent = new ComponentName(context, RouterActivity.class);
+        final ArrayList<ResolveInfo> options = new ArrayList<>();
+
+        for (final ResolveInfo info : resolved) {
+            if (info.activityInfo == null) {
+                continue;
+            }
+            final ComponentName component = new ComponentName(
+                    info.activityInfo.packageName,
+                    info.activityInfo.name);
+            if (!routerComponent.equals(component)) {
+                options.add(info);
+            }
+        }
+        return options;
+    }
+
+    private static void startResolvedIntent(@NonNull final Context context,
+                                            @NonNull final Intent source,
+                                            @NonNull final ResolveInfo resolveInfo) {
+        final Intent target = new Intent(source)
+                .setComponent(new ComponentName(
+                        resolveInfo.activityInfo.packageName,
+                        resolveInfo.activityInfo.name))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        // Resolution may use a selector; explicit launch should carry only the chosen component.
+        target.setSelector(null);
+        try {
+            context.startActivity(target);
         } catch (final ActivityNotFoundException e) {
             Toast.makeText(context, R.string.no_app_to_open_intent, Toast.LENGTH_LONG).show();
         }

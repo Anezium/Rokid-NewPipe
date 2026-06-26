@@ -18,6 +18,7 @@ import java.util.concurrent.TimeUnit
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.R
 import org.schabi.newpipe.ktx.animate
+import org.schabi.newpipe.rokid.RokidExternalNavigationHelper
 import org.schabi.newpipe.rokid.RokidMode
 import org.schabi.newpipe.util.external_communication.ShareUtils
 import org.schabi.newpipe.util.text.setTextWithLinks
@@ -161,11 +162,13 @@ class ErrorPanelHelper(
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         val fallbackIntent = Intent(Settings.ACTION_SETTINGS)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        try {
-            context.startActivity(wifiIntent)
-        } catch (ignored: Exception) {
-            context.startActivity(fallbackIntent)
-        }
+        RokidExternalNavigationHelper.confirmAndOpen(
+            context,
+            wifiIntent,
+            fallbackIntent,
+            R.string.rokid_wifi_settings,
+            R.string.rokid_wifi_settings_message
+        )
     }
 
     companion object {

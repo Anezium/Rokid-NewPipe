@@ -19,6 +19,7 @@ import androidx.preference.PreferenceManager
 import org.schabi.newpipe.R
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import org.schabi.newpipe.local.feed.service.FeedUpdateInfo
+import org.schabi.newpipe.rokid.RokidExternalNavigationHelper
 import org.schabi.newpipe.util.NavigationHelper
 import org.schabi.newpipe.util.image.CoilHelper
 
@@ -180,11 +181,21 @@ class NotificationHelper(val context: Context) {
                 val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                     .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(intent)
+                RokidExternalNavigationHelper.confirmAndOpen(
+                    context,
+                    intent,
+                    R.string.notifications,
+                    R.string.rokid_notification_settings_message
+                )
             } else {
                 val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
                 intent.data = "package:${context.packageName}".toUri()
-                context.startActivity(intent)
+                RokidExternalNavigationHelper.confirmAndOpen(
+                    context,
+                    intent,
+                    R.string.notifications,
+                    R.string.rokid_notification_settings_message
+                )
             }
         }
     }

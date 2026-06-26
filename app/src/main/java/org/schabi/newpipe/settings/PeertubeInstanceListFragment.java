@@ -34,6 +34,10 @@ import org.schabi.newpipe.databinding.DialogEditTextBinding;
 import org.schabi.newpipe.databinding.FragmentInstanceListBinding;
 import org.schabi.newpipe.databinding.ItemInstanceBinding;
 import org.schabi.newpipe.extractor.services.peertube.PeertubeInstance;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
+import org.schabi.newpipe.rokid.RokidMode;
+import org.schabi.newpipe.rokid.RokidTextInputHelper;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.Constants;
 import org.schabi.newpipe.util.PeertubeHelper;
 import org.schabi.newpipe.util.ThemeHelper;
@@ -152,6 +156,7 @@ public class PeertubeInstanceListFragment extends Fragment {
 
     private void selectInstance(final PeertubeInstance instance) {
         selectedInstance = PeertubeHelper.selectInstance(instance, requireContext());
+        instanceListAdapter.refreshSelectionState();
         sharedPreferences.edit().putBoolean(Constants.KEY_MAIN_PAGE_CHANGE, true).apply();
     }
 
@@ -169,7 +174,7 @@ public class PeertubeInstanceListFragment extends Fragment {
 
     private void restoreDefaults() {
         final Context context = requireContext();
-        new AlertDialog.Builder(context)
+        RokidDialogNavigationHelper.show(context, new AlertDialog.Builder(context)
                 .setTitle(R.string.restore_defaults)
                 .setMessage(R.string.restore_defaults_confirmation)
                 .setNegativeButton(R.string.cancel, null)
@@ -178,7 +183,7 @@ public class PeertubeInstanceListFragment extends Fragment {
                     selectInstance(PeertubeInstance.DEFAULT_INSTANCE);
                     instanceListAdapter.submitList(PeertubeHelper.getInstanceList(context));
                 })
-                .show();
+        );
     }
 
     private void showAddItemDialog(final Context c) {
@@ -187,7 +192,7 @@ public class PeertubeInstanceListFragment extends Fragment {
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
         dialogBinding.dialogEditText.setHint(R.string.peertube_instance_add_help);
 
-        new AlertDialog.Builder(c)
+        final AlertDialog dialog = new AlertDialog.Builder(c)
                 .setTitle(R.string.peertube_instance_add_title)
                 .setIcon(R.drawable.ic_placeholder_peertube)
                 .setView(dialogBinding.getRoot())
@@ -196,7 +201,9 @@ public class PeertubeInstanceListFragment extends Fragment {
                     final String url = dialogBinding.dialogEditText.getText().toString();
                     addInstance(url);
                 })
-                .show();
+                .create();
+        RokidTextInputHelper.attach(requireActivity(), dialog, dialogBinding.dialogEditText);
+        dialog.show();
     }
 
     private void addInstance(final String url) {
@@ -337,6 +344,18 @@ public class PeertubeInstanceListFragment extends Fragment {
             submitList(list);
         }
 
+        public void moveItemDown(final int fromPosition) {
+            if (fromPosition < 0 || fromPosition >= getItemCount() || getItemCount() < 2) {
+                return;
+            }
+            final int toPosition = fromPosition == getItemCount() - 1 ? 0 : fromPosition + 1;
+            swapItems(fromPosition, toPosition);
+        }
+
+        public void refreshSelectionState() {
+            notifyItemRangeChanged(0, getItemCount());
+        }
+
         @NonNull
         @Override
         public InstanceListAdapter.TabViewHolder onCreateViewHolder(@NonNull final ViewGroup parent,
@@ -374,6 +393,27 @@ public class PeertubeInstanceListFragment extends Fragment {
                 final PeertubeInstance instance = getItem(position);
                 itemBinding.instanceName.setText(instance.getName());
                 itemBinding.instanceUrl.setText(instance.getUrl());
+                AccessibilityUtils.describeFocusableItem(itemBinding.getRoot(),
+                        instance.getName(), instance.getUrl(),
+                        selectedInstance.getUrl().equals(instance.getUrl())
+                                ? getString(R.string.rokid_selected) : null);
+                itemBinding.instanceIcon.setImportantForAccessibility(
+                        View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+                itemBinding.selectInstanceRB.setImportantForAccessibility(
+                        View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+                itemBinding.handle.setFocusable(true);
+                itemBinding.handle.setFocusableInTouchMode(true);
+                itemBinding.handle.setClickable(true);
+                itemBinding.handle.setImportantForAccessibility(
+                        View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+                AccessibilityUtils.describeFocusableItem(itemBinding.handle,
+                        instance.getName(), getString(R.string.rokid_move_down));
+                itemBinding.handle.setOnClickListener(view -> {
+                    if (RokidMode.enabled()) {
+                        moveItemDown(getBindingAdapterPosition());
+                    }
+                });
+                itemBinding.getRoot().setOnClickListener(view -> selectInstance(instance));
                 itemBinding.selectInstanceRB.setOnCheckedChangeListener(null);
                 if (selectedInstance.getUrl().equals(instance.getUrl())) {
                     if (lastChecked != null && lastChecked != itemBinding.selectInstanceRB) {

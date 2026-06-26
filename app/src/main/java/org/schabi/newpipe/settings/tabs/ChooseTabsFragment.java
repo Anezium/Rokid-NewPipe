@@ -31,11 +31,14 @@ import org.schabi.newpipe.R;
 import org.schabi.newpipe.error.ErrorInfo;
 import org.schabi.newpipe.error.ErrorUtil;
 import org.schabi.newpipe.error.UserAction;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
+import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.settings.SelectChannelFragment;
 import org.schabi.newpipe.settings.SelectKioskFragment;
 import org.schabi.newpipe.settings.SelectPlaylistFragment;
 import org.schabi.newpipe.settings.SelectFeedGroupFragment;
 import org.schabi.newpipe.settings.tabs.AddTabDialog.ChooseTabListItem;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.ThemeHelper;
 
 import java.util.ArrayList;
@@ -127,7 +130,7 @@ public class ChooseTabsFragment extends Fragment {
     }
 
     private void restoreDefaults() {
-        new AlertDialog.Builder(requireContext())
+        RokidDialogNavigationHelper.show(requireContext(), new AlertDialog.Builder(requireContext())
                 .setTitle(R.string.restore_defaults)
                 .setMessage(R.string.restore_defaults_confirmation)
                 .setNegativeButton(R.string.cancel, null)
@@ -136,7 +139,7 @@ public class ChooseTabsFragment extends Fragment {
                     updateTabList();
                     selectedTabsAdapter.notifyDataSetChanged();
                 })
-                .show();
+        );
     }
 
     private void initButton(final View rootView) {
@@ -390,6 +393,22 @@ public class ChooseTabsFragment extends Fragment {
 
                 tabNameView.setText(getTabName(type, tab));
                 tabIconView.setImageResource(tab.getTabIconRes(requireContext()));
+                AccessibilityUtils.describeFocusableItem(itemView, tabNameView.getText(),
+                        RokidMode.enabled() ? getString(R.string.rokid_move_down) : null);
+                tabIconView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+                handle.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+                itemView.setOnClickListener(view -> {
+                    if (!RokidMode.enabled() || getItemCount() < 2) {
+                        return;
+                    }
+                    final int fromPosition = getBindingAdapterPosition();
+                    if (fromPosition == RecyclerView.NO_POSITION) {
+                        return;
+                    }
+                    final int toPosition = fromPosition == getItemCount() - 1
+                            ? 0 : fromPosition + 1;
+                    SelectedTabsAdapter.this.swapItems(fromPosition, toPosition);
+                });
             }
 
             private String getTabName(@NonNull final Tab.Type type, @NonNull final Tab tab) {

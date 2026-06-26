@@ -5,6 +5,7 @@
 
 package org.schabi.newpipe.settings;
 
+import android.app.Dialog;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -23,6 +24,8 @@ import org.schabi.newpipe.R;
 import org.schabi.newpipe.error.ErrorUtil;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.StreamingService;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.KioskTranslator;
 import org.schabi.newpipe.util.ServiceHelper;
 import org.schabi.newpipe.util.ThemeHelper;
@@ -47,6 +50,14 @@ public class SelectKioskFragment extends DialogFragment {
     public void onCreate(@Nullable final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setStyle(STYLE_NO_TITLE, ThemeHelper.getMinWidthDialogTheme(requireContext()));
+    }
+
+    @NonNull
+    @Override
+    public Dialog onCreateDialog(final Bundle savedInstanceState) {
+        final Dialog dialog = super.onCreateDialog(savedInstanceState);
+        RokidDialogNavigationHelper.attach(requireActivity(), dialog);
+        return dialog;
     }
 
     @Override
@@ -116,6 +127,10 @@ public class SelectKioskFragment extends DialogFragment {
             holder.titleView.setText(entry.kioskName);
             holder.thumbnailView
                     .setImageDrawable(AppCompatResources.getDrawable(requireContext(), entry.icon));
+            holder.thumbnailView.setContentDescription(null);
+            holder.thumbnailView.setImportantForAccessibility(
+                    View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            AccessibilityUtils.describeFocusableItem(holder.view, entry.kioskName);
             holder.view.setOnClickListener(view -> clickedItem(entry));
         }
 

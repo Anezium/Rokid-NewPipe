@@ -1,5 +1,6 @@
 package org.schabi.newpipe.local.subscription.dialog
 
+import android.app.Dialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -22,6 +23,8 @@ import org.schabi.newpipe.databinding.DialogFeedGroupReorderBinding
 import org.schabi.newpipe.local.subscription.dialog.FeedGroupReorderDialogViewModel.DialogEvent.ProcessingEvent
 import org.schabi.newpipe.local.subscription.dialog.FeedGroupReorderDialogViewModel.DialogEvent.SuccessEvent
 import org.schabi.newpipe.local.subscription.item.FeedGroupReorderItem
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper
+import org.schabi.newpipe.rokid.RokidMode
 import org.schabi.newpipe.util.ThemeHelper
 
 class FeedGroupReorderDialog : DialogFragment() {
@@ -33,6 +36,7 @@ class FeedGroupReorderDialog : DialogFragment() {
     @State
     @JvmField
     var groupOrderedIdList = ArrayList<Long>()
+    private var currentGroups = emptyList<FeedGroupEntity>()
     private val groupAdapter = GroupieAdapter()
     private val itemTouchHelper = ItemTouchHelper(getItemTouchCallback())
 
@@ -41,6 +45,12 @@ class FeedGroupReorderDialog : DialogFragment() {
         Bridge.restoreInstanceState(this, savedInstanceState)
 
         setStyle(STYLE_NO_TITLE, ThemeHelper.getMinWidthDialogTheme(requireContext()))
+    }
+
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        return super.onCreateDialog(savedInstanceState).also { dialog ->
+            RokidDialogNavigationHelper.attach(requireActivity(), dialog)
+        }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -63,6 +73,11 @@ class FeedGroupReorderDialog : DialogFragment() {
         binding.feedGroupsList.layoutManager = LinearLayoutManager(requireContext())
         binding.feedGroupsList.adapter = groupAdapter
         itemTouchHelper.attachToRecyclerView(binding.feedGroupsList)
+        groupAdapter.setOnItemClickListener { item, _ ->
+            if (RokidMode.enabled() && item is FeedGroupReorderItem) {
+                moveGroupDown(item.groupId)
+            }
+        }
 
         binding.confirmButton.setOnClickListener {
             viewModel.updateOrder(groupOrderedIdList)
@@ -80,16 +95,32 @@ class FeedGroupReorderDialog : DialogFragment() {
     }
 
     private fun handleGroups(list: List<FeedGroupEntity>) {
-        val groupList: List<FeedGroupEntity>
+        currentGroups = list
+        updateGroupAdapter()
+    }
 
+    private fun updateGroupAdapter() {
+        val groupList: List<FeedGroupEntity>
         if (groupOrderedIdList.isEmpty()) {
-            groupList = list
+            groupList = currentGroups
             groupOrderedIdList.addAll(groupList.map { it.uid })
         } else {
-            groupList = list.sortedBy { groupOrderedIdList.indexOf(it.uid) }
+            groupList = currentGroups.sortedBy { groupOrderedIdList.indexOf(it.uid) }
         }
 
         groupAdapter.update(groupList.map { FeedGroupReorderItem(it, itemTouchHelper) })
+    }
+
+    private fun moveGroupDown(groupId: Long) {
+        val sourceIndex = groupOrderedIdList.indexOf(groupId)
+        if (sourceIndex < 0 || groupOrderedIdList.size < 2) {
+            return
+        }
+
+        val targetIndex = if (sourceIndex == groupOrderedIdList.lastIndex) 0 else sourceIndex + 1
+        Collections.swap(groupOrderedIdList, sourceIndex, targetIndex)
+        updateGroupAdapter()
+        binding.feedGroupsList.scrollToPosition(targetIndex)
     }
 
     private fun disableInput() {

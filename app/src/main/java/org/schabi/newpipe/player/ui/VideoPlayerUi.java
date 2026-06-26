@@ -32,6 +32,7 @@ import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
@@ -135,6 +136,8 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
     private PopupMenu audioTrackPopupMenu;
     protected PopupMenu playbackSpeedPopupMenu;
     private PopupMenu captionPopupMenu;
+    @Nullable
+    private RokidPlayerMenuController rokidMenuController;
     private int rokidActionIndex = -1;
 
 
@@ -161,6 +164,10 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
                             @NonNull final PlayerBinding playerBinding) {
         super(player);
         binding = playerBinding;
+        if (binding.getRoot() instanceof ViewGroup) {
+            rokidMenuController = new RokidPlayerMenuController(context,
+                    (ViewGroup) binding.getRoot(), this, this);
+        }
         setupFromView();
     }
 
@@ -449,6 +456,9 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
     @Override
     public void destroy() {
         super.destroy();
+        if (rokidMenuController != null) {
+            rokidMenuController.destroy();
+        }
         binding.endScreen.setImageDrawable(null);
         deinitPlayerSeekOverlay();
         deinitListeners();
@@ -1235,47 +1245,16 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
         captionPopupMenu.setOnDismissListener(this);
 
         // Add option for turning off caption
-        final MenuItem captionOffItem = captionPopupMenu.getMenu().add(POPUP_MENU_ID_CAPTION,
-                0, Menu.NONE, R.string.caption_none);
-        captionOffItem.setOnMenuItemClickListener(menuItem -> {
-            final int textRendererIndex = player.getCaptionRendererIndex();
-            if (textRendererIndex != RENDERER_UNAVAILABLE) {
-                player.getTrackSelector().setParameters(player.getTrackSelector()
-                        .buildUponParameters().setRendererDisabled(textRendererIndex, true));
-            }
-            player.getPrefs().edit()
-                    .remove(context.getString(R.string.caption_user_set_key)).apply();
-            return true;
-        });
+        captionPopupMenu.getMenu().add(POPUP_MENU_ID_CAPTION, 0, Menu.NONE,
+                R.string.caption_none);
 
         // Add all available captions
         for (int i = 0; i < availableLanguages.size(); i++) {
             final String captionLanguage = availableLanguages.get(i);
-            final MenuItem captionItem = captionPopupMenu.getMenu().add(POPUP_MENU_ID_CAPTION,
-                    i + 1, Menu.NONE, captionLanguage);
-            captionItem.setOnMenuItemClickListener(menuItem -> {
-                final int textRendererIndex = player.getCaptionRendererIndex();
-                if (textRendererIndex != RENDERER_UNAVAILABLE) {
-                    // DefaultTrackSelector will select for text tracks in the following order.
-                    // When multiple tracks share the same rank, a random track will be chosen.
-                    // 1. ANY track exactly matching preferred language name
-                    // 2. ANY track exactly matching preferred language stem
-                    // 3. ROLE_FLAG_CAPTION track matching preferred language stem
-                    // 4. ROLE_FLAG_DESCRIBES_MUSIC_AND_SOUND track matching preferred language stem
-                    // This means if a caption track of preferred language is not available,
-                    // then an auto-generated track of that language will be chosen automatically.
-                    player.getTrackSelector().setParameters(player.getTrackSelector()
-                            .buildUponParameters()
-                            .setPreferredTextLanguages(captionLanguage,
-                                    PlayerHelper.captionLanguageStemOf(captionLanguage))
-                            .setPreferredTextRoleFlags(C.ROLE_FLAG_CAPTION)
-                            .setRendererDisabled(textRendererIndex, false));
-                    player.getPrefs().edit().putString(context.getString(
-                            R.string.caption_user_set_key), captionLanguage).apply();
-                }
-                return true;
-            });
+            captionPopupMenu.getMenu().add(POPUP_MENU_ID_CAPTION, i + 1, Menu.NONE,
+                    captionLanguage);
         }
+        captionPopupMenu.setOnMenuItemClickListener(this);
         captionPopupMenu.setOnDismissListener(this);
 
         // apply caption language from previous user preference
@@ -1310,7 +1289,28 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
 
     protected abstract void onPlaybackSpeedClicked();
 
+    protected boolean showRokidPlaybackSpeedMenu() {
+        return showRokidAccessibleMenu(playbackSpeedPopupMenu);
+    }
+
+    private boolean showRokidAccessibleMenu(@Nullable final PopupMenu popupMenu) {
+        if (rokidMenuController == null || !rokidMenuController.show(popupMenu)) {
+            return false;
+        }
+
+        isSomePopupMenuVisible = true;
+        return true;
+    }
+
     private void onQualityClicked() {
+        if (showRokidAccessibleMenu(qualityPopupMenu)) {
+            player.getSelectedVideoStream()
+                    .map(s -> MediaFormat.getNameById(s.getFormatId()) + " "
+                            + s.getResolution())
+                    .ifPresent(binding.qualityTextView::setText);
+            return;
+        }
+
         qualityPopupMenu.show();
         isSomePopupMenuVisible = true;
 
@@ -1320,6 +1320,10 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
     }
 
     private void onAudioTracksClicked() {
+        if (showRokidAccessibleMenu(audioTrackPopupMenu)) {
+            return;
+        }
+
         audioTrackPopupMenu.show();
         isSomePopupMenuVisible = true;
     }
@@ -1347,6 +1351,10 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
 
             player.setPlaybackSpeed(speed);
             binding.playbackSpeed.setText(formatSpeed(speed));
+            return true;
+        } else if (menuItem.getGroupId() == POPUP_MENU_ID_CAPTION) {
+            RokidCaptionMenuHandler.onCaptionItemClick(context, player, menuItem);
+            return true;
         }
 
         return false;
@@ -1415,6 +1423,10 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
         if (DEBUG) {
             Log.d(TAG, "onCaptionClicked() called");
         }
+        if (showRokidAccessibleMenu(captionPopupMenu)) {
+            return;
+        }
+
         captionPopupMenu.show();
         isSomePopupMenuVisible = true;
     }
@@ -1584,6 +1596,9 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
                 return true;
             case PREVIOUS:
             case NEXT:
+                if (rokidMenuController != null && rokidMenuController.isVisible()) {
+                    return rokidMenuController.moveFocus(action == RokidKeyMapper.Action.NEXT);
+                }
                 if (isRokidActionRailVisible()) {
                     return moveRokidActionFocus(action == RokidKeyMapper.Action.NEXT);
                 }
@@ -1593,8 +1608,14 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
                 }
                 return false;
             case SELECT:
+                if (rokidMenuController != null && rokidMenuController.activateSelected()) {
+                    return true;
+                }
                 return selectFromRokidKey();
             case BACK:
+                if (rokidMenuController != null && rokidMenuController.dismiss(true)) {
+                    return true;
+                }
                 if (isRokidActionRailVisible() || isControlsVisible()) {
                     hideControls(0, 0);
                     return true;
@@ -1720,7 +1741,27 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
                 View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         binding.playNextButton.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         binding.playPauseButton.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        RokidActionAccessibilityBinder.bindAll(this::syncRokidActionSelectionFromAccessibility,
+                binding.rokidActionPlayPause, binding.rokidActionFullscreen,
+                binding.rokidActionQuality, binding.rokidActionSpeed,
+                binding.rokidActionCaptions, binding.rokidActionClose);
         updateRokidPlayerActions();
+    }
+
+    private void syncRokidActionSelectionFromAccessibility(@NonNull final View actionView) {
+        if (!RokidMode.enabled() || binding == null || binding.rokidActionRail == null) {
+            return;
+        }
+
+        final ArrayList<View> actions = getVisibleRokidActions();
+        final int index = actions.indexOf(actionView);
+        if (index < 0) {
+            return;
+        }
+
+        rokidActionIndex = index;
+        applyRokidActionSelection(actions);
+        showControlsThenHide();
     }
 
     private void updateRokidPlayerActions() {

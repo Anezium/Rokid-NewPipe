@@ -5,6 +5,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
+import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.webkit.CookieManager;
@@ -25,6 +27,9 @@ import org.schabi.newpipe.MainActivity;
 import org.schabi.newpipe.R;
 import org.schabi.newpipe.databinding.ActivityRecaptchaBinding;
 import org.schabi.newpipe.extractor.utils.Utils;
+import org.schabi.newpipe.rokid.RokidFocusNavigator;
+import org.schabi.newpipe.rokid.RokidKeyMapper;
+import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.util.ThemeHelper;
 
 /*
@@ -83,6 +88,12 @@ public class ReCaptchaActivity extends AppCompatActivity {
         final WebSettings webSettings = recaptchaBinding.reCaptchaWebView.getSettings();
         webSettings.setJavaScriptEnabled(true);
         webSettings.setUserAgentString(DownloaderImpl.USER_AGENT);
+        recaptchaBinding.reCaptchaWebView.setContentDescription(
+                getString(R.string.title_activity_recaptcha));
+        recaptchaBinding.reCaptchaWebView.setFocusable(true);
+        recaptchaBinding.reCaptchaWebView.setFocusableInTouchMode(true);
+        recaptchaBinding.reCaptchaWebView.setImportantForAccessibility(
+                View.IMPORTANT_FOR_ACCESSIBILITY_YES);
 
         recaptchaBinding.reCaptchaWebView.setWebViewClient(new WebViewClient() {
             @Override
@@ -123,6 +134,20 @@ public class ReCaptchaActivity extends AppCompatActivity {
         }
 
         return true;
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(final KeyEvent event) {
+        if (RokidMode.enabled() && event.getAction() == KeyEvent.ACTION_DOWN) {
+            if (event.getRepeatCount() > 0
+                    && RokidKeyMapper.isDirectionalKey(event.getKeyCode())) {
+                return true;
+            }
+            if (RokidFocusNavigator.handle(this, event)) {
+                return true;
+            }
+        }
+        return super.dispatchKeyEvent(event);
     }
 
     @Override

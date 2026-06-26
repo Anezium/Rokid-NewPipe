@@ -21,6 +21,8 @@ import org.schabi.newpipe.R;
 import org.schabi.newpipe.databinding.ListRadioIconItemBinding;
 import org.schabi.newpipe.databinding.SingleChoiceDialogViewBinding;
 import org.schabi.newpipe.player.notification.NotificationConstants;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.DeviceUtils;
 import org.schabi.newpipe.util.ThemeHelper;
 import org.schabi.newpipe.views.FocusOverlayView;
@@ -53,6 +55,9 @@ class NotificationSlot {
 
     private ImageView icon;
     private TextView summary;
+    private View actionArea;
+    private View compactArea;
+    private CheckBox compactSlotCheckBox;
 
     NotificationSlot(final Context context,
                      final SharedPreferences prefs,
@@ -82,23 +87,27 @@ class NotificationSlot {
     void setupTitle(final View view) {
         ((TextView) view.findViewById(R.id.notificationActionTitle))
                 .setText(SLOT_TITLES[i]);
-        view.findViewById(R.id.notificationActionClickableArea).setOnClickListener(
-                v -> openActionChooserDialog());
+        actionArea = view.findViewById(R.id.notificationActionClickableArea);
+        actionArea.setOnClickListener(v -> openActionChooserDialog());
+        updateAccessibility();
     }
 
     void setupCheckbox(final View view, final boolean isCompactSlotChecked) {
-        final CheckBox compactSlotCheckBox = view.findViewById(R.id.notificationActionCheckBox);
+        compactSlotCheckBox = view.findViewById(R.id.notificationActionCheckBox);
+        compactArea = view.findViewById(R.id.notificationActionCheckBoxClickableArea);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             // there are no compact slots to customize on Android 13+
             compactSlotCheckBox.setVisibility(View.GONE);
-            view.findViewById(R.id.notificationActionCheckBoxClickableArea)
-                    .setVisibility(View.GONE);
+            compactArea.setVisibility(View.GONE);
             return;
         }
 
         compactSlotCheckBox.setChecked(isCompactSlotChecked);
-        view.findViewById(R.id.notificationActionCheckBoxClickableArea).setOnClickListener(
-                v -> onToggleCompactSlot.accept(i, compactSlotCheckBox));
+        compactArea.setOnClickListener(v -> {
+            onToggleCompactSlot.accept(i, compactSlotCheckBox);
+            updateAccessibility();
+        });
+        updateAccessibility();
     }
 
     void setupSelectedAction(final View view) {
@@ -116,6 +125,28 @@ class NotificationSlot {
         }
 
         summary.setText(NotificationConstants.getActionName(context, selectedAction));
+        updateAccessibility();
+    }
+
+    private void updateAccessibility() {
+        final CharSequence title = context.getText(SLOT_TITLES[i]);
+        final CharSequence actionName = summary == null ? null : summary.getText();
+        if (icon != null) {
+            icon.setContentDescription(null);
+            icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        }
+        if (actionArea != null) {
+            AccessibilityUtils.describeFocusableItem(actionArea,
+                    context.getString(R.string.notification_action_choose_accessibility),
+                    title, actionName);
+        }
+        if (compactArea != null && compactSlotCheckBox != null
+                && compactArea.getVisibility() == View.VISIBLE) {
+            compactArea.setSelected(compactSlotCheckBox.isChecked());
+            AccessibilityUtils.describeFocusableItem(compactArea,
+                    context.getString(R.string.notification_action_compact_accessibility),
+                    title, actionName);
+        }
     }
 
     void openActionChooserDialog() {
@@ -158,6 +189,7 @@ class NotificationSlot {
             radioButton.setOnClickListener(radioButtonsClickListener);
             binding.list.addView(radioButton);
         }
+        RokidDialogNavigationHelper.attach(context, alertDialog);
         alertDialog.show();
 
         if (DeviceUtils.isTv(context)) {

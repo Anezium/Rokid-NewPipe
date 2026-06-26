@@ -45,6 +45,8 @@ import org.schabi.newpipe.fragments.detail.TabAdapter;
 import org.schabi.newpipe.ktx.AnimationType;
 import org.schabi.newpipe.local.feed.notifications.NotificationHelper;
 import org.schabi.newpipe.local.subscription.SubscriptionManager;
+import org.schabi.newpipe.rokid.RokidSnackbarHelper;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.ChannelTabHelper;
 import org.schabi.newpipe.util.Constants;
 import org.schabi.newpipe.util.ExtractorHelper;
@@ -450,10 +452,10 @@ public class ChannelFragment extends BaseStateFragment<ChannelInfo>
      * Show a snackbar with the option to enable notifications on new streams for this channel.
      */
     private void showNotifySnackbar() {
-        Snackbar.make(binding.getRoot(), R.string.you_successfully_subscribed, Snackbar.LENGTH_LONG)
+        RokidSnackbarHelper.show(Snackbar.make(binding.getRoot(),
+                        R.string.you_successfully_subscribed, Snackbar.LENGTH_LONG)
                 .setAction(R.string.get_notified, v -> setNotify(true))
-                .setActionTextColor(Color.YELLOW)
-                .show();
+                .setActionTextColor(Color.YELLOW));
     }
 
 
@@ -617,6 +619,12 @@ public class ChannelFragment extends BaseStateFragment<ChannelInfo>
             );
             binding.subChannelTitleView.setVisibility(View.VISIBLE);
             binding.subChannelAvatarView.setVisibility(View.VISIBLE);
+            AccessibilityUtils.describeFocusableItem(binding.subChannelTitleView,
+                    currentInfo.getParentChannelName());
+            binding.subChannelAvatarView.setContentDescription(null);
+            binding.subChannelAvatarView.setFocusable(false);
+            binding.subChannelAvatarView.setImportantForAccessibility(
+                    View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         }
 
         updateRssButton();

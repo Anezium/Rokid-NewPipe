@@ -20,7 +20,6 @@
 
 package org.schabi.newpipe;
 
-import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -49,6 +48,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.ActionBarDrawerToggle;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
@@ -84,6 +84,7 @@ import org.schabi.newpipe.player.Player;
 import org.schabi.newpipe.player.event.OnKeyDownListener;
 import org.schabi.newpipe.player.helper.PlayerHolder;
 import org.schabi.newpipe.player.playqueue.PlayQueue;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
 import org.schabi.newpipe.rokid.RokidFocusNavigator;
 import org.schabi.newpipe.rokid.RokidKeyMapper;
 import org.schabi.newpipe.rokid.RokidKeyboardController;
@@ -1094,7 +1095,7 @@ public class MainActivity extends AppCompatActivity {
             final String detailsUrl = getKeepAndroidOpenDetailsUrl();
             final var solutionUrl = "https://github.com/woheller69/FreeDroidWarn#solutions";
 
-            final var dialog = new AlertDialog.Builder(this)
+            final var dialog = RokidDialogNavigationHelper.show(this, new AlertDialog.Builder(this)
                     .setTitle("Keep Android Open")
                     .setCancelable(false)
                     .setMessage(R.string.kao_dialog_warning)
@@ -1102,8 +1103,7 @@ public class MainActivity extends AppCompatActivity {
                             .putLong(lastCheckKey, now.toEpochMilli())
                             .apply())
                     .setNeutralButton(R.string.kao_solution, null)
-                    .setNegativeButton(R.string.kao_dialog_more_info, null)
-                    .show();
+                    .setNegativeButton(R.string.kao_dialog_more_info, null));
 
             // If we use setNeutralButton/setNegativeButton, dialog will close after pressing the
             // buttons, but we want it to close only when positive button is pressed
@@ -1142,15 +1142,14 @@ public class MainActivity extends AppCompatActivity {
             return; // dialog was already shown in the past, no need to show it again
         }
 
-        final var dialog = new AlertDialog.Builder(this)
+        final var dialog = RokidDialogNavigationHelper.show(this, new AlertDialog.Builder(this)
                 .setTitle(R.string.api23_requirement_dialog_title)
                 .setCancelable(false)
                 .setMessage(R.string.api23_requirement_dialog_message)
                 .setPositiveButton(android.R.string.ok, (d, w) -> prefs.edit()
                         .putBoolean(shownKey, true)
                         .apply())
-                .setNegativeButton(R.string.api23_requirement_dialog_blogpost, null)
-                .show();
+                .setNegativeButton(R.string.api23_requirement_dialog_blogpost, null));
 
         // If we use setNegativeButton, dialog will close after pressing the button,
         // but we want it to close only when positive button is pressed

@@ -10,6 +10,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.app.AlertDialog
@@ -22,6 +23,12 @@ import java.time.format.DateTimeFormatter
 import org.schabi.newpipe.BuildConfig
 import org.schabi.newpipe.R
 import org.schabi.newpipe.databinding.ActivityErrorBinding
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper
+import org.schabi.newpipe.rokid.RokidFocusNavigator
+import org.schabi.newpipe.rokid.RokidKeyMapper
+import org.schabi.newpipe.rokid.RokidKeyboardController
+import org.schabi.newpipe.rokid.RokidMode
+import org.schabi.newpipe.rokid.RokidTextInputHelper
 import org.schabi.newpipe.util.Localization
 import org.schabi.newpipe.util.ThemeHelper
 import org.schabi.newpipe.util.external_communication.ShareUtils
@@ -99,6 +106,16 @@ class ErrorActivity : AppCompatActivity() {
             openPrivacyPolicyDialog(this, "GITHUB")
         }
 
+        if (RokidMode.enabled()) {
+            RokidTextInputHelper.prepare(binding.errorCommentBox)
+            binding.errorCommentBox.setOnClickListener {
+                RokidTextInputHelper.show(this, binding.errorCommentBox) {
+                    RokidTextInputHelper.hide(this, binding.errorCommentBox)
+                    binding.errorReportCopyButton.requestFocus()
+                }
+            }
+        }
+
         // normal bugreport
         buildInfo(errorInfo)
         binding.errorMessageView.setTextWithLinks(errorInfo.getMessage(this))
@@ -113,6 +130,28 @@ class ErrorActivity : AppCompatActivity() {
         return true
     }
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (RokidMode.enabled() && event.action == KeyEvent.ACTION_DOWN) {
+            if (RokidKeyboardController.forActivity(this).handleKeyEvent(event)) {
+                return true
+            }
+            if (event.repeatCount > 0 && RokidKeyMapper.isDirectionalKey(event.keyCode)) {
+                return true
+            }
+            if (RokidFocusNavigator.handle(this, event)) {
+                return true
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun onDestroy() {
+        if (::binding.isInitialized) {
+            RokidTextInputHelper.hide(this, binding.errorCommentBox)
+        }
+        super.onDestroy()
+    }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             android.R.id.home -> {
@@ -122,7 +161,7 @@ class ErrorActivity : AppCompatActivity() {
 
             R.id.menu_item_share_error -> {
                 ShareUtils.shareText(
-                    applicationContext,
+                    this,
                     getString(R.string.error_report_title),
                     buildJson()
                 )
@@ -134,28 +173,30 @@ class ErrorActivity : AppCompatActivity() {
     }
 
     private fun openPrivacyPolicyDialog(context: Context, action: String) {
-        AlertDialog.Builder(context)
-            .setIcon(android.R.drawable.ic_dialog_alert)
-            .setTitle(R.string.privacy_policy_title)
-            .setMessage(R.string.start_accept_privacy_policy)
-            .setCancelable(false)
-            .setNeutralButton(R.string.read_privacy_policy) { _, _ ->
-                ShareUtils.openUrlInApp(context, context.getString(R.string.privacy_policy_url))
-            }
-            .setPositiveButton(R.string.accept) { _, _ ->
-                if (action == "EMAIL") { // send on email
-                    val intent = Intent(Intent.ACTION_SENDTO)
-                        .setData("mailto:".toUri()) // only email apps should handle this
-                        .putExtra(Intent.EXTRA_EMAIL, arrayOf(ERROR_EMAIL_ADDRESS))
-                        .putExtra(Intent.EXTRA_SUBJECT, errorEmailSubject)
-                        .putExtra(Intent.EXTRA_TEXT, buildJson())
-                    ShareUtils.openIntentInApp(context, intent)
-                } else if (action == "GITHUB") { // open the NewPipe issue page on GitHub
-                    ShareUtils.openUrlInApp(this, ERROR_GITHUB_ISSUE_URL)
+        RokidDialogNavigationHelper.show(
+            context,
+            AlertDialog.Builder(context)
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .setTitle(R.string.privacy_policy_title)
+                .setMessage(R.string.start_accept_privacy_policy)
+                .setCancelable(false)
+                .setNeutralButton(R.string.read_privacy_policy) { _, _ ->
+                    ShareUtils.openUrlInApp(context, context.getString(R.string.privacy_policy_url))
                 }
-            }
-            .setNegativeButton(R.string.decline, null)
-            .show()
+                .setPositiveButton(R.string.accept) { _, _ ->
+                    if (action == "EMAIL") { // send on email
+                        val intent = Intent(Intent.ACTION_SENDTO)
+                            .setData("mailto:".toUri()) // only email apps should handle this
+                            .putExtra(Intent.EXTRA_EMAIL, arrayOf(ERROR_EMAIL_ADDRESS))
+                            .putExtra(Intent.EXTRA_SUBJECT, errorEmailSubject)
+                            .putExtra(Intent.EXTRA_TEXT, buildJson())
+                        ShareUtils.openIntentInApp(context, intent)
+                    } else if (action == "GITHUB") { // open the NewPipe issue page on GitHub
+                        ShareUtils.openUrlInApp(this, ERROR_GITHUB_ISSUE_URL)
+                    }
+                }
+                .setNegativeButton(R.string.decline, null)
+        )
     }
 
     private fun formErrorText(stacktrace: Array<String>): String {

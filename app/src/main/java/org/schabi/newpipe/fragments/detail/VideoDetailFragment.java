@@ -106,8 +106,10 @@ import org.schabi.newpipe.player.playqueue.PlayQueueItem;
 import org.schabi.newpipe.player.playqueue.SinglePlayQueue;
 import org.schabi.newpipe.player.ui.MainPlayerUi;
 import org.schabi.newpipe.player.ui.VideoPlayerUi;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
 import org.schabi.newpipe.rokid.RokidKeyboardController;
 import org.schabi.newpipe.rokid.RokidMode;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.Constants;
 import org.schabi.newpipe.util.DeviceUtils;
 import org.schabi.newpipe.util.ExtractorHelper;
@@ -1056,6 +1058,9 @@ public final class VideoDetailFragment
         RokidKeyboardController.hideAll(activity);
 
         binding.getRoot().setBackgroundColor(Color.BLACK);
+        binding.getRoot().setFocusable(false);
+        binding.getRoot().setFocusableInTouchMode(false);
+        binding.getRoot().setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         binding.detailMainContent.setBackgroundColor(Color.BLACK);
         binding.detailContentRootLayout.setBackgroundColor(Color.BLACK);
         binding.detailContentRootHiding.setBackgroundColor(Color.BLACK);
@@ -1080,6 +1085,28 @@ public final class VideoDetailFragment
         binding.detailSubChannelTextView.setTextColor(Color.WHITE);
         binding.viewPager.setVisibility(View.GONE);
         binding.tabLayout.setVisibility(View.GONE);
+        updateRokidDetailAccessibility(currentInfo);
+    }
+
+    private void updateRokidDetailAccessibility(@Nullable final StreamInfo info) {
+        if (!RokidMode.enabled() || binding == null) {
+            return;
+        }
+
+        final CharSequence titleLabel = !isEmpty(binding.detailVideoTitleView.getText())
+                ? binding.detailVideoTitleView.getText() : title;
+        final CharSequence uploaderLabel = info == null ? null : (
+                !isEmpty(info.getSubChannelName())
+                        ? info.getSubChannelName() : info.getUploaderName());
+        final CharSequence durationLabel =
+                binding.detailDurationView.getVisibility() == View.VISIBLE
+                        ? binding.detailDurationView.getText() : null;
+
+        AccessibilityUtils.describeFocusableItem(binding.detailThumbnailRootLayout,
+                getString(R.string.rokid_play_video_action),
+                titleLabel,
+                uploaderLabel,
+                durationLabel);
     }
 
     public void updateTabLayoutVisibility() {
@@ -2271,14 +2298,13 @@ public final class VideoDetailFragment
     }
 
     private void showClearingQueueConfirmation(final Runnable onAllow) {
-        new AlertDialog.Builder(activity)
+            RokidDialogNavigationHelper.show(activity, new AlertDialog.Builder(activity)
                 .setTitle(R.string.clear_queue_confirmation_description)
                 .setNegativeButton(R.string.cancel, null)
                 .setPositiveButton(R.string.ok, (dialog, which) -> {
                     onAllow.run();
                     dialog.dismiss();
-                })
-                .show();
+                }));
     }
 
     private void showExternalVideoPlaybackDialog() {
@@ -2325,7 +2351,7 @@ public final class VideoDetailFragment
                         videoStreamsForExternalPlayers.get(index));
             });
         }
-        builder.show();
+        RokidDialogNavigationHelper.show(activity, builder);
     }
 
     private void showExternalAudioPlaybackDialog() {
@@ -2350,7 +2376,7 @@ public final class VideoDetailFragment
                     .map(audioStream -> Localization.audioTrackName(activity, audioStream))
                     .toArray(CharSequence[]::new);
 
-            new AlertDialog.Builder(activity)
+            RokidDialogNavigationHelper.show(activity, new AlertDialog.Builder(activity)
                     .setTitle(R.string.select_audio_track_external_players)
                     .setNeutralButton(R.string.open_in_browser, (dialog, i) ->
                             ShareUtils.openUrlInBrowser(requireActivity(), url))
@@ -2360,8 +2386,7 @@ public final class VideoDetailFragment
                         final int index = ((AlertDialog) dialog).getListView()
                                 .getCheckedItemPosition();
                         startOnExternalPlayer(activity, currentInfo, audioTracks.get(index));
-                    })
-                    .show();
+                    }));
         }
     }
 

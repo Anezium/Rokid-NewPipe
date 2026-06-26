@@ -23,6 +23,7 @@ import org.schabi.newpipe.extractor.InfoItem;
 import org.schabi.newpipe.extractor.comments.CommentsInfoItem;
 import org.schabi.newpipe.info_list.InfoItemBuilder;
 import org.schabi.newpipe.local.history.HistoryRecordManager;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.DeviceUtils;
 import org.schabi.newpipe.util.Localization;
 import org.schabi.newpipe.util.NavigationHelper;
@@ -170,6 +171,9 @@ public class CommentInfoItemHolder extends InfoItemHolder {
             }
             return true;
         });
+        AccessibilityUtils.describeFocusableItem(itemView, itemTitleView.getText(),
+                itemContentView.getText(), itemLikesCountView.getText(),
+                repliesButton.getText());
     }
 
     private void openCommentAuthor(@NonNull final CommentsInfoItem item) {

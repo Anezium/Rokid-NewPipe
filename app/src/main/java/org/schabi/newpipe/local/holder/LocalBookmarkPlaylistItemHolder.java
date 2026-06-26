@@ -9,6 +9,8 @@ import org.schabi.newpipe.database.LocalItem;
 import org.schabi.newpipe.database.playlist.PlaylistMetadataEntry;
 import org.schabi.newpipe.local.LocalItemBuilder;
 import org.schabi.newpipe.local.history.HistoryRecordManager;
+import org.schabi.newpipe.rokid.RokidMode;
+import org.schabi.newpipe.util.AccessibilityUtils;
 
 import java.time.format.DateTimeFormatter;
 
@@ -35,9 +37,23 @@ public class LocalBookmarkPlaylistItemHolder extends LocalPlaylistItemHolder {
         }
         final PlaylistMetadataEntry item = (PlaylistMetadataEntry) localItem;
 
-        itemHandleView.setOnTouchListener(getOnTouchListener(item));
-
         super.updateFromItem(localItem, historyRecordManager, dateTimeFormatter);
+
+        itemHandleView.setOnClickListener(null);
+        if (RokidMode.enabled()) {
+            itemHandleView.setOnTouchListener(null);
+            AccessibilityUtils.describeFocusableItem(itemHandleView,
+                    item.getOrderingName(), itemView.getContext()
+                            .getString(R.string.rokid_move_down));
+            itemHandleView.setOnClickListener(view -> {
+                if (itemBuilder.getOnItemSelectedListener() != null) {
+                    itemBuilder.getOnItemSelectedListener().drag(item,
+                            LocalBookmarkPlaylistItemHolder.this);
+                }
+            });
+        } else {
+            itemHandleView.setOnTouchListener(getOnTouchListener(item));
+        }
     }
 
     private View.OnTouchListener getOnTouchListener(final PlaylistMetadataEntry item) {

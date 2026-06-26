@@ -441,6 +441,10 @@ public final class PopupPlayerUi extends VideoPlayerUi {
 
     @Override
     protected void onPlaybackSpeedClicked() {
+        if (showRokidPlaybackSpeedMenu()) {
+            return;
+        }
+
         playbackSpeedPopupMenu.show();
         isSomePopupMenuVisible = true;
     }

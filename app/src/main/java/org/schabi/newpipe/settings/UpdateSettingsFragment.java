@@ -1,15 +1,16 @@
 package org.schabi.newpipe.settings;
 
-import android.app.AlertDialog;
 import android.content.Context;
 import android.os.Bundle;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceManager;
 
 import org.schabi.newpipe.NewVersionWorker;
 import org.schabi.newpipe.R;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
 
 public class UpdateSettingsFragment extends BasePreferenceFragment {
     private final Preference.OnPreferenceChangeListener updatePreferenceChange = (p, nVal) -> {
@@ -41,7 +42,7 @@ public class UpdateSettingsFragment extends BasePreferenceFragment {
     }
 
     public static void askForConsentToUpdateChecks(final Context context) {
-        new AlertDialog.Builder(context)
+        RokidDialogNavigationHelper.show(context, new AlertDialog.Builder(context)
                 .setTitle(context.getString(R.string.check_for_updates))
                 .setMessage(context.getString(R.string.auto_update_check_description))
                 .setPositiveButton(context.getString(R.string.yes), (d, w) -> {
@@ -53,7 +54,7 @@ public class UpdateSettingsFragment extends BasePreferenceFragment {
                     // set explicitly to false, since the default is true on previous versions
                     setAutoUpdateCheckEnabled(context, false);
                 })
-                .show();
+        );
     }
 
     private static void setAutoUpdateCheckEnabled(final Context context, final boolean enabled) {

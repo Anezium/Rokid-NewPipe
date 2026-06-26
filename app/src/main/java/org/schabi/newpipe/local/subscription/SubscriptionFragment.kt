@@ -46,6 +46,8 @@ import org.schabi.newpipe.local.subscription.item.FeedGroupCarouselItem
 import org.schabi.newpipe.local.subscription.item.GroupsHeader
 import org.schabi.newpipe.local.subscription.item.Header
 import org.schabi.newpipe.local.subscription.item.ImportSubscriptionsHintPlaceholderItem
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper
+import org.schabi.newpipe.rokid.RokidMode
 import org.schabi.newpipe.util.NavigationHelper
 import org.schabi.newpipe.util.OnClickGesture
 import org.schabi.newpipe.util.ServiceHelper
@@ -123,6 +125,14 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
     }
 
     private fun buildImportExportMenu(menu: Menu) {
+        if (RokidMode.enabled()) {
+            setClickListenerToMenuItem(menu.add(R.string.import_from)) { showRokidImportMenu() }
+                .setIcon(R.drawable.ic_backup)
+            setClickListenerToMenuItem(menu.add(R.string.export_to)) { showRokidExportMenu() }
+                .setIcon(R.drawable.ic_save)
+            return
+        }
+
         // -- Import --
         val importSubMenu = menu.addSubMenu(R.string.import_from)
 
@@ -146,6 +156,40 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
 
         addMenuItemToSubmenu(exportSubMenu, R.string.file) { importExportHelper.onExportSelected() }
             .setIcon(R.drawable.ic_save)
+    }
+
+    private fun showRokidImportMenu() {
+        val labels = mutableListOf<CharSequence>()
+        val actions = mutableListOf<() -> Unit>()
+
+        labels.add(getString(R.string.previous_export))
+        actions.add { importExportHelper.onImportPreviousSelected() }
+
+        for (service in ServiceList.all()) {
+            val subscriptionExtractor = service.subscriptionExtractor ?: continue
+            if (subscriptionExtractor.supportedSources.isEmpty()) continue
+
+            labels.add(service.serviceInfo.name)
+            actions.add { onImportFromServiceSelected(service.serviceId) }
+        }
+
+        RokidDialogNavigationHelper.show(
+            requireContext(),
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.import_from)
+                .setItems(labels.toTypedArray()) { _, which -> actions[which].invoke() }
+        )
+    }
+
+    private fun showRokidExportMenu() {
+        RokidDialogNavigationHelper.show(
+            requireContext(),
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.export_to)
+                .setItems(arrayOf(getString(R.string.file))) { _, _ ->
+                    importExportHelper.onExportSelected()
+                }
+        )
     }
 
     private fun addMenuItemToSubmenu(
@@ -305,10 +349,12 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
         dialogTitleBinding.itemTitleView.text = selectedItem.name
         dialogTitleBinding.itemAdditionalDetails.visibility = View.GONE
 
-        AlertDialog.Builder(requireContext())
-            .setCustomTitle(dialogTitleBinding.root)
-            .setItems(commands, actions)
-            .show()
+        RokidDialogNavigationHelper.show(
+            requireContext(),
+            AlertDialog.Builder(requireContext())
+                .setCustomTitle(dialogTitleBinding.root)
+                .setItems(commands, actions)
+        )
     }
 
     private fun deleteChannel(selectedItem: ChannelInfoItem) {

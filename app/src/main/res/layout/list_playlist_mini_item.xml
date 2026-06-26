@@ -17,6 +17,7 @@
         android:layout_alignParentLeft="true"
         android:layout_alignParentTop="true"
         android:layout_marginRight="@dimen/video_item_search_image_right_margin"
+        android:importantForAccessibility="no"
         android:scaleType="fitStart"
         android:src="@drawable/placeholder_thumbnail_playlist"
         tools:ignore="RtlHardcoded" />

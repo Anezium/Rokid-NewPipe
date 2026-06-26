@@ -15,6 +15,7 @@ import org.schabi.newpipe.error.ErrorUtil;
 import org.schabi.newpipe.error.ReCaptchaActivity;
 import org.schabi.newpipe.error.UserAction;
 import org.schabi.newpipe.local.history.HistoryRecordManager;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
 import org.schabi.newpipe.util.InfoCache;
 
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
@@ -124,36 +125,35 @@ public class HistorySettingsFragment extends BasePreferenceFragment {
     public static void openDeleteWatchHistoryDialog(@NonNull final Context context,
                                                     final HistoryRecordManager recordManager,
                                                     final CompositeDisposable disposables) {
-        new AlertDialog.Builder(context)
+        RokidDialogNavigationHelper.show(context, new AlertDialog.Builder(context)
                 .setTitle(R.string.delete_view_history_alert)
                 .setNegativeButton(R.string.cancel, ((dialog, which) -> dialog.dismiss()))
                 .setPositiveButton(R.string.delete, ((dialog, which) -> {
                     disposables.add(getDeletePlaybackStatesDisposable(context, recordManager));
                     disposables.add(getWholeStreamHistoryDisposable(context, recordManager));
                     disposables.add(getRemoveOrphanedRecordsDisposable(context, recordManager));
-                }))
-                .show();
+                })));
     }
 
     public static void openDeletePlaybackStatesDialog(@NonNull final Context context,
                                                       final HistoryRecordManager recordManager,
                                                       final CompositeDisposable disposables) {
-        new AlertDialog.Builder(context)
+        RokidDialogNavigationHelper.show(context, new AlertDialog.Builder(context)
                 .setTitle(R.string.delete_playback_states_alert)
                 .setNegativeButton(R.string.cancel, ((dialog, which) -> dialog.dismiss()))
                 .setPositiveButton(R.string.delete, ((dialog, which) ->
-                        disposables.add(getDeletePlaybackStatesDisposable(context, recordManager))))
-                .show();
+                        disposables.add(getDeletePlaybackStatesDisposable(
+                                context, recordManager)))));
     }
 
     public static void openDeleteSearchHistoryDialog(@NonNull final Context context,
                                                      final HistoryRecordManager recordManager,
                                                      final CompositeDisposable disposables) {
-        new AlertDialog.Builder(context)
+        RokidDialogNavigationHelper.show(context, new AlertDialog.Builder(context)
                 .setTitle(R.string.delete_search_history_alert)
                 .setNegativeButton(R.string.cancel, ((dialog, which) -> dialog.dismiss()))
                 .setPositiveButton(R.string.delete, ((dialog, which) ->
-                        disposables.add(getDeleteSearchHistoryDisposable(context, recordManager))))
-                .show();
+                        disposables.add(getDeleteSearchHistoryDisposable(
+                                context, recordManager)))));
     }
 }

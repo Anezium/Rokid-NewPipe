@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SubMenu;
@@ -41,6 +42,11 @@ import org.schabi.newpipe.player.playqueue.PlayQueueItem;
 import org.schabi.newpipe.player.playqueue.PlayQueueItemBuilder;
 import org.schabi.newpipe.player.playqueue.PlayQueueItemHolder;
 import org.schabi.newpipe.player.playqueue.PlayQueueItemTouchCallback;
+import org.schabi.newpipe.rokid.RokidExternalNavigationHelper;
+import org.schabi.newpipe.rokid.RokidFocusNavigator;
+import org.schabi.newpipe.rokid.RokidKeyMapper;
+import org.schabi.newpipe.rokid.RokidMode;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.Localization;
 import org.schabi.newpipe.util.NavigationHelper;
 import org.schabi.newpipe.util.PermissionHelper;
@@ -59,6 +65,9 @@ public final class PlayQueueActivity extends AppCompatActivity
     private static final int SMOOTH_SCROLL_MAXIMUM_DISTANCE = 80;
 
     private static final int MENU_ID_AUDIO_TRACK = 71;
+    private static final float[] ROKID_PLAYBACK_SPEEDS = {
+            0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f
+    };
 
     private Player player;
 
@@ -126,6 +135,20 @@ public final class PlayQueueActivity extends AppCompatActivity
     }
 
     @Override
+    public boolean dispatchKeyEvent(final KeyEvent event) {
+        if (RokidMode.enabled() && event.getAction() == KeyEvent.ACTION_DOWN) {
+            if (event.getRepeatCount() > 0
+                    && RokidKeyMapper.isDirectionalKey(event.getKeyCode())) {
+                return true;
+            }
+            if (RokidFocusNavigator.handle(this, event)) {
+                return true;
+            }
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
+    @Override
     public boolean onOptionsItemSelected(final MenuItem item) {
         final int itemId = item.getItemId();
         if (itemId == android.R.id.home) {
@@ -144,7 +167,10 @@ public final class PlayQueueActivity extends AppCompatActivity
             player.toggleMute();
             return true;
         } else if (itemId == R.id.action_system_audio) {
-            startActivity(new Intent(Settings.ACTION_SOUND_SETTINGS));
+            RokidExternalNavigationHelper.confirmAndOpen(this,
+                    new Intent(Settings.ACTION_SOUND_SETTINGS),
+                    R.string.play_queue_audio_settings,
+                    R.string.rokid_sound_settings_message);
             return true;
         } else if (itemId == R.id.action_switch_main) {
             this.player.setRecovery();
@@ -251,8 +277,14 @@ public final class PlayQueueActivity extends AppCompatActivity
 
     private void buildQueue() {
         queueControlBinding.playQueue.setLayoutManager(new LinearLayoutManager(this));
-        queueControlBinding.playQueue.setClickable(true);
-        queueControlBinding.playQueue.setLongClickable(true);
+        queueControlBinding.playQueue.setClickable(!RokidMode.enabled());
+        queueControlBinding.playQueue.setLongClickable(!RokidMode.enabled());
+        if (RokidMode.enabled()) {
+            queueControlBinding.playQueue.setFocusable(false);
+            queueControlBinding.playQueue.setFocusableInTouchMode(false);
+            queueControlBinding.playQueue.setImportantForAccessibility(
+                    View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        }
         queueControlBinding.playQueue.clearOnScrollListeners();
         queueControlBinding.playQueue.addOnScrollListener(getQueueScrollListener());
 
@@ -269,6 +301,14 @@ public final class PlayQueueActivity extends AppCompatActivity
     private void buildSeekBar() {
         queueControlBinding.seekBar.setOnSeekBarChangeListener(this);
         queueControlBinding.liveSync.setOnClickListener(this);
+        if (RokidMode.enabled()) {
+            queueControlBinding.seekBar.setFocusable(false);
+            queueControlBinding.seekBar.setFocusableInTouchMode(false);
+            queueControlBinding.seekBar.setImportantForAccessibility(
+                    View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            AccessibilityUtils.describeFocusableItem(queueControlBinding.liveSync,
+                    getString(R.string.duration_live));
+        }
     }
 
     private void buildControls() {
@@ -279,6 +319,16 @@ public final class PlayQueueActivity extends AppCompatActivity
         queueControlBinding.controlFastForward.setOnClickListener(this);
         queueControlBinding.controlForward.setOnClickListener(this);
         queueControlBinding.controlShuffle.setOnClickListener(this);
+        queueControlBinding.controlRepeat.setContentDescription(
+                getString(R.string.notification_action_repeat));
+        queueControlBinding.controlBackward.setContentDescription(
+                getString(R.string.previous_stream));
+        queueControlBinding.controlFastRewind.setContentDescription(getString(R.string.rewind));
+        queueControlBinding.controlPlayPause.setContentDescription(getString(R.string.pause));
+        queueControlBinding.controlFastForward.setContentDescription(getString(R.string.forward));
+        queueControlBinding.controlForward.setContentDescription(getString(R.string.next_stream));
+        queueControlBinding.controlShuffle.setContentDescription(
+                getString(R.string.notification_action_shuffle));
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -336,11 +386,27 @@ public final class PlayQueueActivity extends AppCompatActivity
 
             @Override
             public void onStartDrag(final PlayQueueItemHolder viewHolder) {
+                if (RokidMode.enabled()) {
+                    moveQueueItemDown(viewHolder.getBindingAdapterPosition());
+                    return;
+                }
                 if (itemTouchHelper != null) {
                     itemTouchHelper.startDrag(viewHolder);
                 }
             }
         };
+    }
+
+    private void moveQueueItemDown(final int sourceIndex) {
+        if (player == null || player.getPlayQueue() == null) {
+            return;
+        }
+        final PlayQueue playQueue = player.getPlayQueue();
+        if (sourceIndex < 0 || sourceIndex >= playQueue.size() || playQueue.size() < 2) {
+            return;
+        }
+        final int targetIndex = sourceIndex == playQueue.size() - 1 ? 0 : sourceIndex + 1;
+        playQueue.move(sourceIndex, targetIndex);
     }
 
     private void scrollToSelected() {
@@ -405,8 +471,25 @@ public final class PlayQueueActivity extends AppCompatActivity
         if (player == null) {
             return;
         }
+        if (RokidMode.enabled()) {
+            cycleRokidPlaybackSpeed();
+            return;
+        }
         PlaybackParameterDialog.newInstance(player.getPlaybackSpeed(), player.getPlaybackPitch(),
                 player.getPlaybackSkipSilence(), this).show(getSupportFragmentManager(), TAG);
+    }
+
+    private void cycleRokidPlaybackSpeed() {
+        final float currentSpeed = player.getPlaybackSpeed();
+        float nextSpeed = ROKID_PLAYBACK_SPEEDS[0];
+        for (final float speed : ROKID_PLAYBACK_SPEEDS) {
+            if (speed > currentSpeed + 0.01f) {
+                nextSpeed = speed;
+                break;
+            }
+        }
+        onPlaybackParameterChanged(nextSpeed, player.getPlaybackPitch(),
+                player.getPlaybackSkipSilence());
     }
 
     @Override
@@ -505,6 +588,10 @@ public final class PlayQueueActivity extends AppCompatActivity
         if (info != null) {
             queueControlBinding.songName.setText(info.getName());
             queueControlBinding.artistName.setText(info.getUploaderName());
+            AccessibilityUtils.describeFocusableItem(queueControlBinding.metadata,
+                    getString(R.string.play_queue_scroll_current),
+                    info.getName(),
+                    info.getUploaderName());
 
             queueControlBinding.endTime.setVisibility(View.GONE);
             queueControlBinding.liveSync.setVisibility(View.GONE);

@@ -6,6 +6,7 @@
 package org.schabi.newpipe.settings;
 
 import android.content.DialogInterface;
+import android.app.Dialog;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -23,7 +24,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import org.schabi.newpipe.R;
 import org.schabi.newpipe.database.subscription.SubscriptionEntity;
 import org.schabi.newpipe.error.ErrorUtil;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
 import org.schabi.newpipe.local.subscription.SubscriptionManager;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.ThemeHelper;
 import org.schabi.newpipe.util.image.CoilHelper;
 
@@ -62,6 +65,14 @@ public class SelectChannelFragment extends DialogFragment {
     public void onCreate(@Nullable final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setStyle(STYLE_NO_TITLE, ThemeHelper.getMinWidthDialogTheme(requireContext()));
+    }
+
+    @NonNull
+    @Override
+    public Dialog onCreateDialog(final Bundle savedInstanceState) {
+        final Dialog dialog = super.onCreateDialog(savedInstanceState);
+        RokidDialogNavigationHelper.attach(requireActivity(), dialog);
+        return dialog;
     }
 
     @Override
@@ -173,6 +184,10 @@ public class SelectChannelFragment extends DialogFragment {
         public void onBindViewHolder(final SelectChannelItemHolder holder, final int position) {
             final SubscriptionEntity entry = subscriptions.get(position);
             holder.titleView.setText(entry.getName());
+            AccessibilityUtils.describeFocusableItem(holder.view, entry.getName());
+            holder.thumbnailView.setContentDescription(null);
+            holder.thumbnailView.setImportantForAccessibility(
+                    View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             holder.view.setOnClickListener(view -> clickedItem(position));
             CoilHelper.INSTANCE.loadAvatar(holder.thumbnailView, entry.getAvatarUrl());
         }

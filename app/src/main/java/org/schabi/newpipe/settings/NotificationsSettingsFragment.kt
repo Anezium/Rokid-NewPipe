@@ -20,6 +20,7 @@ import org.schabi.newpipe.local.feed.notifications.NotificationHelper
 import org.schabi.newpipe.local.feed.notifications.NotificationWorker
 import org.schabi.newpipe.local.feed.notifications.ScheduleOptions
 import org.schabi.newpipe.local.subscription.SubscriptionManager
+import org.schabi.newpipe.rokid.RokidSnackbarHelper
 
 class NotificationsSettingsFragment : BasePreferenceFragment(), OnSharedPreferenceChangeListener {
 
@@ -89,7 +90,7 @@ class NotificationsSettingsFragment : BasePreferenceFragment(), OnSharedPreferen
                             notificationWarningSnackbar = null
                         }
                     })
-                    show()
+                    RokidSnackbarHelper.show(this)
                 }
             }
         }

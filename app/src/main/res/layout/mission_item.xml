@@ -37,7 +37,7 @@
                 android:layout_alignParentRight="true"
                 android:layout_centerVertical="true"
                 android:layout_marginRight="1dp"
-                android:contentDescription="TODO"
+                android:contentDescription="@string/more_options"
                 android:scaleType="center"
                 android:src="@drawable/ic_more_vert"
                 app:tint="?attr/actionColor" />
@@ -50,8 +50,8 @@
             android:layout_height="72dp"
             android:layout_below="@id/item_title_line"
             android:layout_centerHorizontal="true"
-            android:contentDescription="TODO"
             android:gravity="center"
+            android:importantForAccessibility="no"
             android:padding="10dp"
             android:scaleType="fitXY"
             app:tint="?attr/actionColor" />

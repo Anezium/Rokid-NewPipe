@@ -5,6 +5,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.TypedValue;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,6 +22,9 @@ import com.nononsenseapps.filepicker.AbstractFilePickerFragment;
 import com.nononsenseapps.filepicker.FilePickerFragment;
 
 import org.schabi.newpipe.R;
+import org.schabi.newpipe.rokid.RokidFocusNavigator;
+import org.schabi.newpipe.rokid.RokidKeyMapper;
+import org.schabi.newpipe.rokid.RokidMode;
 
 import java.io.File;
 
@@ -42,6 +46,20 @@ public class FilePickerActivityHelper extends com.nononsenseapps.filepicker.File
             this.setTheme(R.style.FilePickerThemeDark);
         }
         super.onCreate(savedInstanceState);
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(final KeyEvent event) {
+        if (RokidMode.enabled() && event.getAction() == KeyEvent.ACTION_DOWN) {
+            if (event.getRepeatCount() > 0
+                    && RokidKeyMapper.isDirectionalKey(event.getKeyCode())) {
+                return true;
+            }
+            if (RokidFocusNavigator.handle(this, event)) {
+                return true;
+            }
+        }
+        return super.dispatchKeyEvent(event);
     }
 
     @Override

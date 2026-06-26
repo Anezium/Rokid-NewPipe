@@ -20,14 +20,26 @@ public final class RokidKeyMapper {
     }
 
     public static Action map(final KeyEvent event) {
-        if (event == null || event.getAction() != KeyEvent.ACTION_DOWN) {
+        if (event == null) {
             return Action.NONE;
         }
-        if (event.getRepeatCount() > 0) {
+
+        return mapEventFields(event.getAction(), event.getKeyCode(), event.getRepeatCount());
+    }
+
+    static Action mapEventFields(
+            final int eventAction,
+            final int keyCode,
+            final int repeatCount
+    ) {
+        if (eventAction != KeyEvent.ACTION_DOWN) {
+            return Action.NONE;
+        }
+        if (repeatCount > 0) {
             return Action.DUPLICATE;
         }
 
-        return map(event.getKeyCode());
+        return map(keyCode);
     }
 
     public static Action map(final int keyCode) {

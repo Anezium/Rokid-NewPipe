@@ -175,6 +175,17 @@ public class LocalItemListAdapter extends RecyclerView.Adapter<RecyclerView.View
         return true;
     }
 
+    public boolean moveItemDown(final int fromAdapterPosition) {
+        final int actualFrom = adapterOffsetWithoutHeader(fromAdapterPosition);
+        if (actualFrom < 0 || actualFrom >= localItems.size() || localItems.size() < 2) {
+            return false;
+        }
+
+        final int actualTo = actualFrom == localItems.size() - 1 ? 0 : actualFrom + 1;
+        final int toAdapterPosition = actualTo + (hasHeader() ? 1 : 0);
+        return swapItems(fromAdapterPosition, toAdapterPosition);
+    }
+
     public void clearStreamItemList() {
         if (localItems.isEmpty()) {
             return;

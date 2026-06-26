@@ -2,7 +2,6 @@ package org.schabi.newpipe.util;
 
 import android.Manifest;
 import android.app.Activity;
-import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -18,6 +17,8 @@ import androidx.core.content.ContextCompat;
 
 import org.schabi.newpipe.App;
 import org.schabi.newpipe.R;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
+import org.schabi.newpipe.rokid.RokidExternalNavigationHelper;
 import org.schabi.newpipe.settings.NewPipeSettings;
 
 public final class PermissionHelper {
@@ -121,10 +122,9 @@ public final class PermissionHelper {
                 final Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                         Uri.parse("package:" + context.getPackageName()));
                 i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                try {
-                    context.startActivity(i);
-                } catch (final ActivityNotFoundException ignored) {
-                }
+                RokidExternalNavigationHelper.confirmAndOpen(context, i,
+                        R.string.permission_display_over_apps,
+                        R.string.rokid_overlay_settings_message);
                 return false;
             // from Android R the ACTION_MANAGE_OVERLAY_PERMISSION will only point to the menu,
             // so let’s add a dialog that points the user to the right setting.
@@ -141,20 +141,17 @@ public final class PermissionHelper {
                                 appNameItalic,
                                 permissionNameItalic
                         );
-                new AlertDialog.Builder(context)
+                RokidDialogNavigationHelper.show(context, new AlertDialog.Builder(context)
                         .setTitle(title)
                         .setMessage(Html.fromHtml(message, Html.FROM_HTML_MODE_COMPACT))
-                        .setPositiveButton("OK", (dialog, which) -> {
+                        .setPositiveButton(R.string.rokid_open_android_settings,
+                                (dialog, which) -> {
                             // we don’t need the package name here, since it won’t do anything on >R
                             final Intent intent =
                                     new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
-                            try {
-                                context.startActivity(intent);
-                            } catch (final ActivityNotFoundException ignored) {
-                            }
+                            RokidExternalNavigationHelper.openExternalActivity(context, intent);
                         })
-                        .setCancelable(true)
-                        .show();
+                        .setCancelable(true));
                 return false;
             }
 

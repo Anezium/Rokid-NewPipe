@@ -13,6 +13,7 @@ import androidx.preference.PreferenceManager;
 
 import org.schabi.newpipe.R;
 import org.schabi.newpipe.extractor.ServiceList;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
 
 /**
  * Util class that provides methods which are related to the Kodi Media Center and its Kore app.
@@ -61,12 +62,12 @@ public final class KoreUtils {
                 .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
         if (!tryOpenIntentInApp(context, intent)) {
-            new AlertDialog.Builder(context)
+            RokidDialogNavigationHelper.show(context, new AlertDialog.Builder(context)
                     .setMessage(R.string.kore_not_found)
                     .setPositiveButton(R.string.install, (dialog, which) ->
                             installKore(context))
                     .setNegativeButton(R.string.cancel, null)
-                    .show();
+            );
         }
     }
 }

@@ -17,6 +17,7 @@ import org.schabi.newpipe.DownloaderImpl;
 import org.schabi.newpipe.R;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.player.helper.PlayerHelper;
+import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.util.Localization;
 import org.schabi.newpipe.util.image.ImageStrategy;
 import org.schabi.newpipe.util.image.PreferredImageQuality;
@@ -40,12 +41,12 @@ public class ContentSettingsFragment extends BasePreferenceFragment {
 
     private void setupAppLanguagePreferences() {
         final Preference appLanguagePref = requirePreference(R.string.app_language_key);
+        final Preference newAppLanguagePref =
+                requirePreference(R.string.app_language_android_13_and_up_key);
         // Android 13+ allows to set app specific languages
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !RokidMode.enabled()) {
             appLanguagePref.setVisible(false);
 
-            final Preference newAppLanguagePref =
-                    requirePreference(R.string.app_language_android_13_and_up_key);
             newAppLanguagePref.setSummaryProvider(preference -> {
                 final Locale loc = AppCompatDelegate.getApplicationLocales().get(0);
                 return loc != null ? loc.getDisplayName() : getString(R.string.systems_language);
@@ -60,6 +61,8 @@ public class ContentSettingsFragment extends BasePreferenceFragment {
             return;
         }
 
+        newAppLanguagePref.setVisible(false);
+        appLanguagePref.setVisible(true);
         appLanguagePref.setOnPreferenceChangeListener((preference, newValue) -> {
             final String language = (String) newValue;
             final String systemLang = getString(R.string.default_localization_key);

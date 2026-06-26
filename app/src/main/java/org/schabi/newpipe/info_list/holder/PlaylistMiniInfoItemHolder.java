@@ -9,6 +9,7 @@ import org.schabi.newpipe.extractor.InfoItem;
 import org.schabi.newpipe.extractor.playlist.PlaylistInfoItem;
 import org.schabi.newpipe.info_list.InfoItemBuilder;
 import org.schabi.newpipe.local.history.HistoryRecordManager;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.Localization;
 import org.schabi.newpipe.util.image.CoilHelper;
 
@@ -61,5 +62,7 @@ public class PlaylistMiniInfoItemHolder extends InfoItemHolder {
             }
             return true;
         });
+        AccessibilityUtils.describeFocusableItem(itemView, item.getName(),
+                itemUploaderView.getText(), itemStreamCountView.getText());
     }
 }

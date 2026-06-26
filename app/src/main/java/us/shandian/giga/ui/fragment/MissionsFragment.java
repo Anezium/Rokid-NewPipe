@@ -31,6 +31,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.nononsenseapps.filepicker.Utils;
 
 import org.schabi.newpipe.R;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
 import org.schabi.newpipe.settings.NewPipeSettings;
 import org.schabi.newpipe.streams.io.NoFileManagerSafeGuard;
 import org.schabi.newpipe.streams.io.StoredFileHelper;
@@ -208,7 +209,7 @@ public class MissionsFragment extends Fragment {
 
     public void showClearDownloadHistoryPrompt() {
         // ask the user whether he wants to just clear history or instead delete files on disk
-        new AlertDialog.Builder(mContext)
+        RokidDialogNavigationHelper.show(mContext, new AlertDialog.Builder(mContext)
                 .setTitle(R.string.clear_download_history)
                 .setMessage(R.string.confirm_prompt)
                 // Intentionally misusing buttons' purpose in order to achieve good order
@@ -217,17 +218,17 @@ public class MissionsFragment extends Fragment {
                 .setNeutralButton(R.string.cancel, null)
                 .setPositiveButton(R.string.delete_downloaded_files, (dialog, which) ->
                         showDeleteDownloadedFilesConfirmationPrompt())
-                .show();
+        );
     }
 
     public void showDeleteDownloadedFilesConfirmationPrompt() {
         // make sure the user confirms once more before deleting files on disk
-        new AlertDialog.Builder(mContext)
+        RokidDialogNavigationHelper.show(mContext, new AlertDialog.Builder(mContext)
                 .setTitle(R.string.delete_downloaded_files_confirm)
                 .setNegativeButton(R.string.cancel, null)
                 .setPositiveButton(R.string.ok, (dialog, which) ->
                         mAdapter.clearFinishedDownloads(true))
-                .show();
+        );
     }
 
     private void updateList() {

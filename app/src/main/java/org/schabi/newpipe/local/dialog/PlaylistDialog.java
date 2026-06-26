@@ -15,6 +15,7 @@ import org.schabi.newpipe.NewPipeDatabase;
 import org.schabi.newpipe.database.stream.model.StreamEntity;
 import org.schabi.newpipe.local.playlist.LocalPlaylistManager;
 import org.schabi.newpipe.player.Player;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
 import org.schabi.newpipe.util.StateSaver;
 
 import java.util.List;
@@ -65,6 +66,7 @@ public abstract class PlaylistDialog extends DialogFragment implements StateSave
         if (window != null) {
             window.requestFeature(Window.FEATURE_NO_TITLE);
         }
+        RokidDialogNavigationHelper.attach(requireActivity(), dialog);
         return dialog;
     }
 

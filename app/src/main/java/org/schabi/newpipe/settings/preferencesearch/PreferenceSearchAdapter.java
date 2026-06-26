@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.schabi.newpipe.databinding.SettingsPreferencesearchListItemResultBinding;
+import org.schabi.newpipe.util.AccessibilityUtils;
 
 import java.util.function.Consumer;
 
@@ -49,6 +50,8 @@ class PreferenceSearchAdapter
             holder.binding.breadcrumbs.setText(item.getBreadcrumbs());
         }
 
+        AccessibilityUtils.describeFocusableItem(holder.itemView, item.getTitle(),
+                item.getSummary(), item.getBreadcrumbs());
         holder.itemView.setOnClickListener(v -> {
             if (onItemClickListener != null) {
                 onItemClickListener.accept(item);

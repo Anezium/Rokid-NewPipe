@@ -24,6 +24,7 @@ import org.schabi.newpipe.extractor.InfoItem;
 import org.schabi.newpipe.extractor.stream.StreamInfoItem;
 import org.schabi.newpipe.extractor.stream.StreamType;
 import org.schabi.newpipe.player.helper.PlayerHolder;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
 import org.schabi.newpipe.util.StreamTypeUtil;
 import org.schabi.newpipe.util.external_communication.KoreUtils;
 
@@ -79,6 +80,7 @@ public final class InfoItemDialog {
                 .setCustomTitle(bannerView)
                 .setItems(items, action)
                 .create();
+        RokidDialogNavigationHelper.attach(activity, dialog);
 
     }
 

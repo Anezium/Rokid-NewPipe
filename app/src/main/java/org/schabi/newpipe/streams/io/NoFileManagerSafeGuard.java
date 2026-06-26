@@ -2,6 +2,7 @@ package org.schabi.newpipe.streams.io;
 
 import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Build;
 import android.util.Log;
 
@@ -9,6 +10,8 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.appcompat.app.AlertDialog;
 
 import org.schabi.newpipe.R;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
+import org.schabi.newpipe.rokid.RokidMode;
 
 /**
  * Helper for when no file-manager/activity was found.
@@ -39,11 +42,10 @@ public final class NoFileManagerSafeGuard {
         }
 
 
-        new AlertDialog.Builder(context)
+        RokidDialogNavigationHelper.show(context, new AlertDialog.Builder(context)
                 .setTitle(R.string.no_app_to_open_intent)
                 .setMessage(message)
-                .setPositiveButton(R.string.ok, null)
-                .show();
+                .setPositiveButton(R.string.ok, null));
     }
 
     /**
@@ -65,11 +67,40 @@ public final class NoFileManagerSafeGuard {
             final String tag,
             final Context context
     ) {
+        if (context != null && RokidMode.enabled() && input instanceof Intent
+                && isAndroidFilePickerIntent((Intent) input)) {
+            RokidDialogNavigationHelper.show(context, new AlertDialog.Builder(context)
+                    .setTitle(R.string.rokid_system_file_picker_title)
+                    .setMessage(R.string.rokid_system_file_picker_message)
+                    .setPositiveButton(R.string.rokid_open_system_picker,
+                            (dialog, which) -> launchUnchecked(
+                                    activityResultLauncher, input, tag, context))
+                    .setNegativeButton(R.string.cancel, null)
+                    .setCancelable(true));
+            return;
+        }
+
+        launchUnchecked(activityResultLauncher, input, tag, context);
+    }
+
+    private static <I> void launchUnchecked(
+            final ActivityResultLauncher<I> activityResultLauncher,
+            final I input,
+            final String tag,
+            final Context context
+    ) {
         try {
             activityResultLauncher.launch(input);
         } catch (final ActivityNotFoundException aex) {
             Log.w(tag, "Unable to launch file/directory picker", aex);
             NoFileManagerSafeGuard.showActivityNotFoundAlert(context);
         }
+    }
+
+    private static boolean isAndroidFilePickerIntent(final Intent intent) {
+        final String action = intent.getAction();
+        return Intent.ACTION_OPEN_DOCUMENT.equals(action)
+                || Intent.ACTION_CREATE_DOCUMENT.equals(action)
+                || Intent.ACTION_OPEN_DOCUMENT_TREE.equals(action);
     }
 }

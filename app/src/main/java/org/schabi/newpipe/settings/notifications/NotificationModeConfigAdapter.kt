@@ -1,6 +1,7 @@
 package org.schabi.newpipe.settings.notifications
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -9,6 +10,7 @@ import org.schabi.newpipe.database.subscription.NotificationMode
 import org.schabi.newpipe.database.subscription.SubscriptionEntity
 import org.schabi.newpipe.databinding.ItemNotificationConfigBinding
 import org.schabi.newpipe.settings.notifications.NotificationModeConfigAdapter.SubscriptionHolder
+import org.schabi.newpipe.util.AccessibilityUtils
 
 /**
  * This [RecyclerView.Adapter] is used in the [NotificationModeConfigFragment].
@@ -53,6 +55,8 @@ class NotificationModeConfigAdapter(
         fun bind(data: SubscriptionItem) {
             itemBinding.root.text = data.title
             itemBinding.root.isChecked = data.notificationMode != NotificationMode.DISABLED
+            AccessibilityUtils.describeFocusableItem(itemBinding.root, data.title)
+            itemBinding.root.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
         }
     }
 

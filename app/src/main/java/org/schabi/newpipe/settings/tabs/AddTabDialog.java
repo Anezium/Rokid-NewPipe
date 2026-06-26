@@ -1,5 +1,6 @@
 package org.schabi.newpipe.settings.tabs;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.view.LayoutInflater;
@@ -14,6 +15,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.AppCompatImageView;
 
 import org.schabi.newpipe.R;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
 
 public final class AddTabDialog {
     private final AlertDialog dialog;
@@ -25,6 +27,9 @@ public final class AddTabDialog {
                 .setTitle(context.getString(R.string.tab_choose))
                 .setAdapter(new DialogListAdapter(context, items), actions)
                 .create();
+        if (context instanceof Activity) {
+            RokidDialogNavigationHelper.attach((Activity) context, dialog);
+        }
     }
 
     public void show() {

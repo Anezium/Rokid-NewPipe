@@ -21,6 +21,7 @@ import androidx.preference.SwitchPreferenceCompat;
 import com.nononsenseapps.filepicker.Utils;
 
 import org.schabi.newpipe.R;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
 import org.schabi.newpipe.streams.io.NoFileManagerSafeGuard;
 import org.schabi.newpipe.streams.io.StoredDirectoryHelper;
 import org.schabi.newpipe.util.FilePickerActivityHelper;
@@ -152,11 +153,10 @@ public class DownloadSettingsFragment extends BasePreferenceFragment {
     }
 
     private void showMessageDialog(@StringRes final int title, @StringRes final int message) {
-        new AlertDialog.Builder(ctx)
+        RokidDialogNavigationHelper.show(ctx, new AlertDialog.Builder(ctx)
                 .setTitle(title)
                 .setMessage(message)
-                .setPositiveButton(getString(R.string.ok), null)
-                .show();
+                .setPositiveButton(getString(R.string.ok), null));
     }
 
     @Override

@@ -68,6 +68,7 @@ import org.schabi.newpipe.player.helper.PlayerHelper;
 import org.schabi.newpipe.player.helper.PlayerHolder;
 import org.schabi.newpipe.player.playqueue.PlayQueue;
 import org.schabi.newpipe.player.playqueue.PlayQueueItem;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
 import org.schabi.newpipe.settings.SettingsActivity;
 import org.schabi.newpipe.util.external_communication.ShareUtils;
 
@@ -325,14 +326,14 @@ public final class NavigationHelper {
                                                      @NonNull final Intent intent) {
         if (!ShareUtils.tryOpenIntentInApp(context, intent)) {
             if (context instanceof Activity) {
-                new AlertDialog.Builder(context)
+                RokidDialogNavigationHelper.show(context, new AlertDialog.Builder(context)
                         .setMessage(R.string.no_player_found)
                         .setPositiveButton(R.string.install, (dialog, which) ->
                                 ShareUtils.installApp(context,
                                         context.getString(R.string.vlc_package)))
                         .setNegativeButton(R.string.cancel, (dialog, which) ->
                                 Log.i("NavigationHelper", "You unlocked a secret unicorn."))
-                        .show();
+                );
             } else {
                 Toast.makeText(context, R.string.no_player_found_toast, Toast.LENGTH_LONG).show();
             }

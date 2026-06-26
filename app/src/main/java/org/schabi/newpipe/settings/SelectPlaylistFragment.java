@@ -2,6 +2,7 @@ package org.schabi.newpipe.settings;
 
 import static org.schabi.newpipe.local.bookmark.MergedPlaylistManager.getMergedOrderedPlaylists;
 
+import android.app.Dialog;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -27,6 +28,8 @@ import org.schabi.newpipe.error.ErrorUtil;
 import org.schabi.newpipe.error.UserAction;
 import org.schabi.newpipe.local.playlist.LocalPlaylistManager;
 import org.schabi.newpipe.local.playlist.RemotePlaylistManager;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.image.CoilHelper;
 
 import java.util.List;
@@ -53,6 +56,14 @@ public class SelectPlaylistFragment extends DialogFragment {
     /*//////////////////////////////////////////////////////////////////////////
     // Fragment's Lifecycle
     //////////////////////////////////////////////////////////////////////////*/
+
+    @NonNull
+    @Override
+    public Dialog onCreateDialog(final Bundle savedInstanceState) {
+        final Dialog dialog = super.onCreateDialog(savedInstanceState);
+        RokidDialogNavigationHelper.attach(requireActivity(), dialog);
+        return dialog;
+    }
 
     @Override
     public View onCreateView(@NonNull final LayoutInflater inflater, final ViewGroup container,
@@ -156,12 +167,20 @@ public class SelectPlaylistFragment extends DialogFragment {
 
             if (selectedItem instanceof PlaylistMetadataEntry entry) {
                 holder.titleView.setText(entry.getOrderingName());
+                AccessibilityUtils.describeFocusableItem(holder.view, entry.getOrderingName());
+                holder.thumbnailView.setContentDescription(null);
+                holder.thumbnailView.setImportantForAccessibility(
+                        View.IMPORTANT_FOR_ACCESSIBILITY_NO);
                 holder.view.setOnClickListener(view -> clickedItem(position));
                 CoilHelper.INSTANCE.loadPlaylistThumbnail(holder.thumbnailView,
                         entry.getThumbnailUrl());
 
             } else if (selectedItem instanceof PlaylistRemoteEntity entry) {
                 holder.titleView.setText(entry.getOrderingName());
+                AccessibilityUtils.describeFocusableItem(holder.view, entry.getOrderingName());
+                holder.thumbnailView.setContentDescription(null);
+                holder.thumbnailView.setImportantForAccessibility(
+                        View.IMPORTANT_FOR_ACCESSIBILITY_NO);
                 holder.view.setOnClickListener(view -> clickedItem(position));
                 CoilHelper.INSTANCE.loadPlaylistThumbnail(holder.thumbnailView,
                         entry.getThumbnailUrl());

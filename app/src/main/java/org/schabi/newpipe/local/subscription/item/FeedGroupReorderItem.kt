@@ -11,6 +11,7 @@ import org.schabi.newpipe.R
 import org.schabi.newpipe.database.feed.model.FeedGroupEntity
 import org.schabi.newpipe.databinding.FeedGroupReorderItemBinding
 import org.schabi.newpipe.local.subscription.FeedGroupIcon
+import org.schabi.newpipe.util.AccessibilityUtils
 
 data class FeedGroupReorderItem(
     val groupId: Long = FeedGroupEntity.GROUP_ALL_ID,
@@ -33,6 +34,13 @@ data class FeedGroupReorderItem(
     override fun bind(viewBinding: FeedGroupReorderItemBinding, position: Int) {
         viewBinding.groupName.text = name
         viewBinding.groupIcon.setImageResource(icon.getDrawableRes())
+        AccessibilityUtils.describeFocusableItem(
+            viewBinding.root,
+            name,
+            viewBinding.root.context.getString(R.string.rokid_move_down)
+        )
+        viewBinding.groupIcon.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        viewBinding.handle.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
     }
 
     override fun bind(viewHolder: GroupieViewHolder<FeedGroupReorderItemBinding>, position: Int, payloads: MutableList<Any>) {

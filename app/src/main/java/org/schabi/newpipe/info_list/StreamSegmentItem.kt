@@ -6,6 +6,7 @@ import com.xwray.groupie.viewbinding.GroupieViewHolder
 import org.schabi.newpipe.R
 import org.schabi.newpipe.databinding.ItemStreamSegmentBinding
 import org.schabi.newpipe.extractor.stream.StreamSegment
+import org.schabi.newpipe.util.AccessibilityUtils
 import org.schabi.newpipe.util.Localization
 import org.schabi.newpipe.util.image.CoilHelper
 
@@ -34,8 +35,15 @@ class StreamSegmentItem(
             viewBinding.textViewChannel.text = item.channelName
             viewBinding.textViewChannel.visibility = View.VISIBLE
         }
-        viewBinding.textViewStartSeconds.text =
-            Localization.getDurationString(item.startTimeSeconds.toLong())
+        val startTime = Localization.getDurationString(item.startTimeSeconds.toLong())
+        viewBinding.textViewStartSeconds.text = startTime
+        AccessibilityUtils.describeFocusableItem(
+            viewBinding.root,
+            item.title,
+            item.channelName,
+            startTime
+        )
+        viewBinding.previewImage.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         viewBinding.root.setOnClickListener { onClick.onItemClick(this, item.startTimeSeconds) }
         viewBinding.root.setOnLongClickListener {
             onClick.onItemLongClick(this, item.startTimeSeconds)

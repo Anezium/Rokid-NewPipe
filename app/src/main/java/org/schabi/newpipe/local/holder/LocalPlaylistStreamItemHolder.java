@@ -14,6 +14,8 @@ import org.schabi.newpipe.database.playlist.PlaylistStreamEntry;
 import org.schabi.newpipe.ktx.ViewUtils;
 import org.schabi.newpipe.local.LocalItemBuilder;
 import org.schabi.newpipe.local.history.HistoryRecordManager;
+import org.schabi.newpipe.rokid.RokidMode;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.DependentPreferenceHelper;
 import org.schabi.newpipe.util.Localization;
 import org.schabi.newpipe.util.ServiceHelper;
@@ -60,7 +62,8 @@ public class LocalPlaylistStreamItemHolder extends LocalItemHolder {
         itemVideoTitleView.setText(item.getStreamEntity().getTitle());
         itemAdditionalDetailsView.setText(Localization
                 .concatenateStrings(item.getStreamEntity().getUploader(),
-                        ServiceHelper.getNameOfServiceById(item.getStreamEntity().getServiceId())));
+                        ServiceHelper.getNameOfServiceById(
+                                item.getStreamEntity().getServiceId())));
 
         if (item.getStreamEntity().getDuration() > 0) {
             itemDurationView.setText(Localization
@@ -100,7 +103,25 @@ public class LocalPlaylistStreamItemHolder extends LocalItemHolder {
             return true;
         });
 
-        itemHandleView.setOnTouchListener(getOnTouchListener(item));
+        itemHandleView.setOnClickListener(null);
+        if (RokidMode.enabled()) {
+            itemHandleView.setOnTouchListener(null);
+            AccessibilityUtils.describeFocusableItem(itemHandleView,
+                    itemVideoTitleView.getText(), itemView.getContext()
+                            .getString(R.string.rokid_move_down));
+            itemHandleView.setOnClickListener(view -> {
+                if (itemBuilder.getOnItemSelectedListener() != null) {
+                    itemBuilder.getOnItemSelectedListener().drag(item,
+                            LocalPlaylistStreamItemHolder.this);
+                }
+            });
+        } else {
+            itemHandleView.setOnTouchListener(getOnTouchListener(item));
+        }
+        AccessibilityUtils.describeFocusableItem(itemView, itemVideoTitleView.getText(),
+                itemAdditionalDetailsView.getText(),
+                itemDurationView.getVisibility() == View.VISIBLE ? itemDurationView.getText()
+                        : null);
     }
 
     @Override

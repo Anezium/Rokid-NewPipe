@@ -37,6 +37,14 @@ public final class RokidFocusNavigator {
             @NonNull final Activity activity,
             @NonNull final KeyEvent event
     ) {
+        return handle(activity, activity.findViewById(android.R.id.content), event);
+    }
+
+    public static boolean handle(
+            @NonNull final Activity activity,
+            final View root,
+            @NonNull final KeyEvent event
+    ) {
         final RokidKeyMapper.Action action = RokidKeyMapper.map(event);
         if (action == RokidKeyMapper.Action.NONE) {
             return false;
@@ -45,7 +53,6 @@ public final class RokidFocusNavigator {
             return true;
         }
 
-        final View root = activity.findViewById(android.R.id.content);
         final View current = activity.getCurrentFocus();
         if (isViewWithIdShown(root, R.id.rokidActionRail)) {
             return false;
@@ -319,9 +326,14 @@ public final class RokidFocusNavigator {
             return false;
         }
 
+        if (focusSiblingTargetInRecyclerHolder(activity, recyclerView, holder, currentTarget,
+                forward)) {
+            return true;
+        }
+
         final boolean moved = focusRecyclerPosition(activity, recyclerView,
-                holder.getBindingAdapterPosition() + (forward ? 1 : -1));
-        return moved || forward;
+                holder.getBindingAdapterPosition() + (forward ? 1 : -1), forward);
+        return moved;
     }
 
     private static boolean tryMoveFromRememberedRecycler(
@@ -340,14 +352,40 @@ public final class RokidFocusNavigator {
         }
 
         final boolean moved = focusRecyclerPosition(activity, recyclerView,
-                state.adapterPosition + (forward ? 1 : -1));
-        return moved || forward;
+                state.adapterPosition + (forward ? 1 : -1), forward);
+        return moved;
+    }
+
+    private static boolean focusSiblingTargetInRecyclerHolder(
+            final Activity activity,
+            final RecyclerView recyclerView,
+            final RecyclerView.ViewHolder holder,
+            final View currentTarget,
+            final boolean forward
+    ) {
+        final ArrayList<View> rowTargets = collectTargets(holder.itemView);
+        if (rowTargets.size() < 2) {
+            return false;
+        }
+
+        final int currentIndex = findCurrentIndex(currentTarget, rowTargets);
+        final int targetIndex = forward ? currentIndex + 1 : currentIndex - 1;
+        if (currentIndex < 0 || targetIndex < 0 || targetIndex >= rowTargets.size()) {
+            return false;
+        }
+
+        final View target = rowTargets.get(targetIndex);
+        final boolean focused = requestRokidFocus(target);
+        LAST_TARGETS.put(activity, target);
+        rememberRecyclerTarget(activity, recyclerView, holder.getBindingAdapterPosition());
+        return focused || target.isFocused();
     }
 
     private static boolean focusRecyclerPosition(
             final Activity activity,
             final RecyclerView recyclerView,
-            final int adapterPosition
+            final int adapterPosition,
+            final boolean forward
     ) {
         final RecyclerView.Adapter<?> adapter = recyclerView.getAdapter();
         if (adapter == null || adapterPosition < 0
@@ -359,7 +397,8 @@ public final class RokidFocusNavigator {
         final RecyclerView.ViewHolder visibleHolder =
                 recyclerView.findViewHolderForAdapterPosition(adapterPosition);
         if (visibleHolder != null) {
-            return focusRecyclerHolder(activity, recyclerView, visibleHolder, adapterPosition);
+            return focusRecyclerHolder(activity, recyclerView, visibleHolder, adapterPosition,
+                    forward);
         }
 
         recyclerView.scrollToPosition(adapterPosition);
@@ -368,7 +407,7 @@ public final class RokidFocusNavigator {
             final RecyclerView.ViewHolder holder =
                     recyclerView.findViewHolderForAdapterPosition(adapterPosition);
             if (holder != null) {
-                focusRecyclerHolder(activity, recyclerView, holder, adapterPosition);
+                focusRecyclerHolder(activity, recyclerView, holder, adapterPosition, forward);
             }
         });
         return true;
@@ -378,12 +417,13 @@ public final class RokidFocusNavigator {
             final Activity activity,
             final RecyclerView recyclerView,
             final RecyclerView.ViewHolder holder,
-            final int adapterPosition
+            final int adapterPosition,
+            final boolean forward
     ) {
-        View target = findFirstRokidTarget(holder.itemView);
-        if (target == null) {
-            target = holder.itemView;
-        }
+        final ArrayList<View> rowTargets = collectTargets(holder.itemView);
+        final View target = rowTargets.isEmpty()
+                ? holder.itemView
+                : rowTargets.get(forward ? 0 : rowTargets.size() - 1);
         final boolean focused = requestRokidFocus(target);
         LAST_TARGETS.put(activity, target);
         rememberRecyclerTarget(activity, recyclerView, adapterPosition);
@@ -392,7 +432,8 @@ public final class RokidFocusNavigator {
 
     private static View findFirstRokidTarget(final View view) {
         if (view == null || !view.isShown() || !view.isEnabled()
-                || view.getWidth() <= 1 || view.getHeight() <= 1) {
+                || view.getWidth() <= 1 || view.getHeight() <= 1
+                || hidesAccessibilityDescendants(view)) {
             return null;
         }
         if (isRokidTarget(view)) {
@@ -490,14 +531,14 @@ public final class RokidFocusNavigator {
 
     private static void collectTargets(final View view, final ArrayList<View> targets) {
         if (view == null || !view.isShown() || !view.isEnabled()
-                || view.getWidth() <= 1 || view.getHeight() <= 1) {
+                || view.getWidth() <= 1 || view.getHeight() <= 1
+                || hidesAccessibilityDescendants(view)) {
             return;
         }
 
         if (isRokidTarget(view)) {
             makeFocusable(view);
             targets.add(view);
-            return;
         }
 
         if (view instanceof ViewGroup) {
@@ -512,8 +553,17 @@ public final class RokidFocusNavigator {
         if (view.getId() == android.R.id.content) {
             return false;
         }
+        if (view.getImportantForAccessibility() == View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                || hidesAccessibilityDescendants(view)) {
+            return false;
+        }
 
         return view instanceof EditText || view.isClickable() || view.isLongClickable();
+    }
+
+    private static boolean hidesAccessibilityDescendants(final View view) {
+        return view.getImportantForAccessibility()
+                == View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS;
     }
 
     private static void makeFocusable(final View view) {
@@ -530,8 +580,12 @@ public final class RokidFocusNavigator {
             return -1;
         }
         for (int i = 0; i < targets.size(); i++) {
-            final View target = targets.get(i);
-            if (current == target || isDescendantOf(current, target)) {
+            if (current == targets.get(i)) {
+                return i;
+            }
+        }
+        for (int i = 0; i < targets.size(); i++) {
+            if (isDescendantOf(current, targets.get(i))) {
                 return i;
             }
         }
@@ -712,20 +766,50 @@ public final class RokidFocusNavigator {
     }
 
     private static boolean clickCurrent(final Activity activity, final View current) {
-        View target = current;
-        if (target == null || !target.isShown() || !target.isEnabled() || !target.isClickable()) {
+        View target = findActivatableAncestorOrSelf(current);
+        if (target == null || !isActivatable(target)) {
             target = LAST_TARGETS.get(activity);
         }
 
-        if (target == null || !target.isShown() || !target.isEnabled()) {
+        if (target == null || !isActivatable(target)) {
             return false;
         }
-        final boolean clicked = target.performClick();
+        final boolean clicked = activate(target);
         if (clicked && !(target instanceof EditText)
                 && !hasAncestorWithId(target, R.id.rokidActionRail)) {
             focusFirstRokidRailTarget(activity);
         }
         return clicked;
+    }
+
+    private static boolean activate(final View target) {
+        if (target.isClickable()) {
+            return target.performClick();
+        }
+        if (target.isLongClickable()) {
+            return target.performLongClick();
+        }
+        return false;
+    }
+
+    private static boolean isActivatable(final View target) {
+        return target.isShown() && target.isEnabled()
+                && (target.isClickable() || target.isLongClickable());
+    }
+
+    private static View findActivatableAncestorOrSelf(final View view) {
+        View current = view;
+        while (current != null) {
+            if (isActivatable(current)
+                    && !hidesAccessibilityDescendants(current)) {
+                return current;
+            }
+            if (!(current.getParent() instanceof View)) {
+                return null;
+            }
+            current = (View) current.getParent();
+        }
+        return null;
     }
 
     private static void focusFirstRokidRailTarget(final Activity activity) {

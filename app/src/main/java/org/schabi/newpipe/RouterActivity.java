@@ -14,6 +14,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.ContextThemeWrapper;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -70,6 +71,10 @@ import org.schabi.newpipe.player.playqueue.ChannelTabPlayQueue;
 import org.schabi.newpipe.player.playqueue.PlayQueue;
 import org.schabi.newpipe.player.playqueue.PlaylistPlayQueue;
 import org.schabi.newpipe.player.playqueue.SinglePlayQueue;
+import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
+import org.schabi.newpipe.rokid.RokidFocusNavigator;
+import org.schabi.newpipe.rokid.RokidKeyMapper;
+import org.schabi.newpipe.rokid.RokidKeyboardController;
 import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.util.ChannelTabHelper;
 import org.schabi.newpipe.util.Constants;
@@ -191,6 +196,23 @@ public class RouterActivity extends AppCompatActivity {
     }
 
     @Override
+    public boolean dispatchKeyEvent(final KeyEvent event) {
+        if (RokidMode.enabled() && event.getAction() == KeyEvent.ACTION_DOWN) {
+            if (RokidKeyboardController.forActivity(this).handleKeyEvent(event)) {
+                return true;
+            }
+            if (event.getRepeatCount() > 0
+                    && RokidKeyMapper.isDirectionalKey(event.getKeyCode())) {
+                return true;
+            }
+            if (RokidFocusNavigator.handle(this, event)) {
+                return true;
+            }
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
+    @Override
     protected void onStart() {
         super.onStart();
 
@@ -283,17 +305,20 @@ public class RouterActivity extends AppCompatActivity {
 
     protected void showUnsupportedUrlDialog(final String url) {
         final Context context = getThemeWrapperContext();
-        new AlertDialog.Builder(context)
+        final AlertDialog dialog = new AlertDialog.Builder(context)
                 .setTitle(R.string.unsupported_url)
                 .setMessage(R.string.unsupported_url_dialog_message)
                 .setIcon(R.drawable.ic_share)
                 .setPositiveButton(R.string.open_in_browser,
-                        (dialog, which) -> ShareUtils.openUrlInBrowser(this, url))
+                        (dialogInterface, which) -> ShareUtils.openUrlInBrowser(this, url))
                 .setNegativeButton(R.string.share,
-                        (dialog, which) -> ShareUtils.shareText(this, "", url)) // no subject
+                        (dialogInterface, which) ->
+                                ShareUtils.shareText(this, "", url)) // no subject
                 .setNeutralButton(R.string.cancel, null)
-                .setOnDismissListener(dialog -> finish())
-                .show();
+                .setOnDismissListener(dialogInterface -> finish())
+                .create();
+        RokidDialogNavigationHelper.attach(this, dialog);
+        dialog.show();
     }
 
     protected void onSuccess() {
@@ -457,6 +482,7 @@ public class RouterActivity extends AppCompatActivity {
 
         alertDialogChoice.setOnShowListener(dialog -> setDialogButtonsState(
                 alertDialogChoice, radioGroup.getCheckedRadioButtonId() != -1));
+        RokidDialogNavigationHelper.attach(this, alertDialogChoice);
 
         radioGroup.setOnCheckedChangeListener((group, checkedId) ->
                 setDialogButtonsState(alertDialogChoice, true));

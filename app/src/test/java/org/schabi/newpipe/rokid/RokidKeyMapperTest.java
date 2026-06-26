@@ -54,4 +54,35 @@ public class RokidKeyMapperTest {
         assertEquals(RokidKeyMapper.Action.BACK,
                 RokidKeyMapper.map(KeyEvent.KEYCODE_BACK, 1_000L));
     }
+
+    @Test
+    public void actionUpEventsAreIgnored() {
+        assertEquals(RokidKeyMapper.Action.NONE,
+                RokidKeyMapper.mapEventFields(KeyEvent.ACTION_UP,
+                        KeyEvent.KEYCODE_DPAD_RIGHT, 0));
+        assertEquals(RokidKeyMapper.Action.NONE,
+                RokidKeyMapper.mapEventFields(KeyEvent.ACTION_UP,
+                        KeyEvent.KEYCODE_DPAD_CENTER, 0));
+    }
+
+    @Test
+    public void heldDirectionalKeyIsDuplicate() {
+        assertEquals(RokidKeyMapper.Action.DUPLICATE,
+                RokidKeyMapper.mapEventFields(KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_DPAD_RIGHT, 1));
+    }
+
+    @Test
+    public void customRokidSwipeKeysUseSameDebounceChannel() {
+        assertEquals(RokidKeyMapper.Action.NEXT,
+                RokidKeyMapper.map(183, 1_000L));
+        assertEquals(RokidKeyMapper.Action.DUPLICATE,
+                RokidKeyMapper.map(KeyEvent.KEYCODE_DPAD_DOWN, 1_120L));
+
+        RokidKeyMapper.resetDebounceForTesting();
+        assertEquals(RokidKeyMapper.Action.PREVIOUS,
+                RokidKeyMapper.map(184, 1_000L));
+        assertEquals(RokidKeyMapper.Action.DUPLICATE,
+                RokidKeyMapper.map(KeyEvent.KEYCODE_DPAD_UP, 1_120L));
+    }
 }

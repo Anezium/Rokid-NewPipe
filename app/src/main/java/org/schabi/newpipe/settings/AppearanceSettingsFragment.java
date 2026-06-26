@@ -10,6 +10,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.preference.Preference;
 
 import org.schabi.newpipe.R;
+import org.schabi.newpipe.rokid.RokidExternalNavigationHelper;
 import org.schabi.newpipe.util.Constants;
 import org.schabi.newpipe.util.ThemeHelper;
 
@@ -58,7 +59,10 @@ public class AppearanceSettingsFragment extends BasePreferenceFragment {
     public boolean onPreferenceTreeClick(final Preference preference) {
         if (getString(R.string.caption_settings_key).equals(preference.getKey())) {
             try {
-                startActivity(new Intent(Settings.ACTION_CAPTIONING_SETTINGS));
+                RokidExternalNavigationHelper.confirmAndOpen(requireContext(),
+                        new Intent(Settings.ACTION_CAPTIONING_SETTINGS),
+                        R.string.caption_setting_title,
+                        R.string.rokid_caption_settings_message);
             } catch (final ActivityNotFoundException e) {
                 Toast.makeText(getActivity(), R.string.general_error, Toast.LENGTH_SHORT).show();
             }

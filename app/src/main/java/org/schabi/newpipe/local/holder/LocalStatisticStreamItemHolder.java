@@ -14,6 +14,7 @@ import org.schabi.newpipe.database.stream.StreamStatisticsEntry;
 import org.schabi.newpipe.ktx.ViewUtils;
 import org.schabi.newpipe.local.LocalItemBuilder;
 import org.schabi.newpipe.local.history.HistoryRecordManager;
+import org.schabi.newpipe.util.AccessibilityUtils;
 import org.schabi.newpipe.util.DependentPreferenceHelper;
 import org.schabi.newpipe.util.Localization;
 import org.schabi.newpipe.util.ServiceHelper;
@@ -133,6 +134,11 @@ public class LocalStatisticStreamItemHolder extends LocalItemHolder {
             }
             return true;
         });
+        AccessibilityUtils.describeFocusableItem(itemView, itemVideoTitleView.getText(),
+                itemUploaderView.getText(), itemAdditionalDetails == null
+                        ? null : itemAdditionalDetails.getText(),
+                itemDurationView.getVisibility() == View.VISIBLE ? itemDurationView.getText()
+                        : null);
     }
 
     @Override

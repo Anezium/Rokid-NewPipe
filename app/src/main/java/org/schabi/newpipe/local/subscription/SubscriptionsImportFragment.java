@@ -34,6 +34,8 @@ import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.subscription.SubscriptionExtractor;
 import org.schabi.newpipe.local.subscription.workers.SubscriptionImportInput;
+import org.schabi.newpipe.rokid.RokidMode;
+import org.schabi.newpipe.rokid.RokidTextInputHelper;
 import org.schabi.newpipe.streams.io.NoFileManagerSafeGuard;
 import org.schabi.newpipe.streams.io.StoredFileHelper;
 import org.schabi.newpipe.util.Constants;
@@ -125,6 +127,12 @@ public class SubscriptionsImportFragment extends BaseFragment {
             inputButton.setText(R.string.import_title);
             inputText.setVisibility(View.VISIBLE);
             inputText.setHint(ServiceHelper.getImportInstructionsHint(currentServiceId));
+            if (RokidMode.enabled()) {
+                RokidTextInputHelper.prepare(inputText);
+                inputText.setOnClickListener(view -> RokidTextInputHelper.show(
+                        activity, inputText, this::onImportClicked,
+                        getString(R.string.import_title)));
+            }
         } else {
             inputButton.setText(R.string.import_file_title);
         }
@@ -150,6 +158,14 @@ public class SubscriptionsImportFragment extends BaseFragment {
     protected void initListeners() {
         super.initListeners();
         inputButton.setOnClickListener(v -> onImportClicked());
+    }
+
+    @Override
+    public void onDestroyView() {
+        if (activity != null && inputText != null) {
+            RokidTextInputHelper.hide(activity, inputText);
+        }
+        super.onDestroyView();
     }
 
     private void onImportClicked() {
