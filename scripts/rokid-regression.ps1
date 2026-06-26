@@ -100,10 +100,12 @@ function Get-NodeLabel {
     param([System.Xml.XmlNode]$Node)
     $text = Get-NodeAttribute $Node "text"
     $description = Get-NodeAttribute $Node "content-desc"
-    if ($description.Length -gt 0) {
-        return $description
+    $label = if ($description.Length -gt 0) {
+        $description
+    } else {
+        $text
     }
-    return $text.Trim()
+    return ($label -replace "\s+", " ").Trim()
 }
 
 function Get-UiNodes {
@@ -685,6 +687,42 @@ function Assert-NoUnnamedFocusableActions {
     Write-Host "Verified named focusable actions"
 }
 
+function Assert-WifiConfirmationDialog {
+    param([string]$Path)
+    $nodes = Get-UiNodes $Path
+    foreach ($label in @(
+            "Wi-Fi",
+            "This opens Android Wi-Fi settings outside NewPipe. Use Back to return.",
+            "CANCEL",
+            "OPEN SETTINGS"
+    )) {
+        Assert-Condition (@($nodes | Where-Object {
+            (Get-NodeAttribute $_ "package") -eq $Package -and
+                    (Get-NodeLabel $_) -eq $label
+        }).Count -gt 0) "Wi-Fi confirmation dialog is missing '$label'"
+    }
+    Write-Host "Verified Wi-Fi confirmation dialog"
+}
+
+function Assert-ScreenshotPixelNotWhite {
+    param(
+        [string]$Path,
+        [int]$X,
+        [int]$Y,
+        [string]$Message
+    )
+    Add-Type -AssemblyName System.Drawing
+    $bitmap = [System.Drawing.Bitmap]::FromFile((Resolve-Path $Path))
+    try {
+        $pixel = $bitmap.GetPixel($X, $Y)
+        Assert-Condition (($pixel.R -lt 240) -or ($pixel.G -lt 240) -or ($pixel.B -lt 240)) `
+                "$Message; pixel at $X,$Y is rgb($($pixel.R),$($pixel.G),$($pixel.B))"
+    } finally {
+        $bitmap.Dispose()
+    }
+    Write-Host "Verified screenshot pixel at $X,$Y is not white"
+}
+
 function Assert-DebugState {
     param(
         [string]$Path,
@@ -726,6 +764,18 @@ function Send-Key {
     param([int]$KeyCode)
     Invoke-GlassesAdb -Arguments @("shell", "input", "keyevent", "$KeyCode") | Out-Null
     Start-Sleep -Milliseconds 500
+}
+
+function Assert-TopResumedContains {
+    param(
+        [string]$Pattern,
+        [string]$Message
+    )
+    $topResumed = Invoke-GlassesAdb -Arguments @(
+            "shell", "dumpsys", "activity", "activities"
+    ) | Select-String -Pattern "topResumedActivity" | Select-Object -First 1
+    Assert-Condition ($null -ne $topResumed -and $topResumed.Line -match $Pattern) `
+            "$Message; topResumedActivity was '$($topResumed.Line)'"
 }
 
 function Show-PlayerRail {
@@ -795,11 +845,29 @@ Assert-DebugState $keyboardState -KeyboardVisible -RequireCustomSelectAction
 
 Invoke-GlassesAdb -Arguments @("shell", "input", "keyevent", "4") | Out-Null
 Start-Sleep -Milliseconds 800
+Invoke-GlassesAdb -Arguments @("shell", "am", "force-stop", $Package) | Out-Null
+Invoke-GlassesAdb -Arguments @(
+        "shell", "monkey", "-p", $Package, "-c", "android.intent.category.LAUNCHER", "1"
+) | Out-Null
+Start-Sleep -Seconds 10
+Send-Key 22
 Send-Key 22
 Send-Key 23
-Start-Sleep -Seconds 1
+Start-Sleep -Seconds 2
 Save-WindowState "03-wifi-recovery"
 Save-DeviceScreenshot "03-wifi-recovery"
+$wifiDump = Save-UiDump "03-wifi-recovery"
+Assert-WifiConfirmationDialog $wifiDump
+Assert-ScreenshotPixelNotWhite (Join-Path $Artifacts "03-wifi-recovery.png") 240 320 `
+        "Wi-Fi confirmation dialog is still rendering as a white blank panel"
+Send-Key 22
+Send-Key 23
+Start-Sleep -Seconds 2
+Save-DeviceScreenshot "03-wifi-settings-open"
+Assert-TopResumedContains "com\.android\.settings" `
+        "Wi-Fi confirmation dialog did not open Android Settings"
+Invoke-GlassesAdb -Arguments @("shell", "input", "keyevent", "4") | Out-Null
+Start-Sleep -Seconds 1
 
 if ($RunPlayer) {
     Invoke-GlassesAdb -Arguments @(
