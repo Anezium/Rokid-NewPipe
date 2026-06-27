@@ -747,13 +747,15 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
                 RokidKeyboardController.hideAll(activity);
                 return;
             }
+            final Runnable voiceSearchAction = isVoiceSearchAvailable()
+                    ? this::startVoiceSearch : null;
             RokidKeyboardController.forActivity(activity).show(
                     searchEditText,
                     () -> {
                         searchEditText.setText(getSearchEditString().trim());
                         search(getSearchEditString(), new String[0], "");
                     },
-                    this::startVoiceSearch);
+                    voiceSearchAction);
             return;
         }
         KeyboardUtil.showKeyboard(activity, searchEditText);
@@ -783,8 +785,9 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
         if (activity == null || searchEditText == null) {
             return;
         }
-        if (!SpeechRecognizer.isRecognitionAvailable(activity)) {
+        if (!isVoiceSearchAvailable()) {
             Toast.makeText(activity, R.string.voice_search_unavailable, Toast.LENGTH_SHORT).show();
+            showKeyboardSearch();
             return;
         }
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO)
@@ -817,6 +820,18 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
             destroyVoiceSearchRecognizer();
             Toast.makeText(activity, R.string.voice_search_failed, Toast.LENGTH_SHORT).show();
             showKeyboardSearch();
+        }
+    }
+
+    private boolean isVoiceSearchAvailable() {
+        if (activity == null) {
+            return false;
+        }
+        try {
+            return SpeechRecognizer.isRecognitionAvailable(activity);
+        } catch (final RuntimeException e) {
+            Log.w(TAG, "Unable to check voice search availability", e);
+            return false;
         }
     }
 

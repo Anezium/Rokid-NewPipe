@@ -5,7 +5,7 @@
             <solid android:color="@android:color/transparent" />
             <stroke
                 android:width="4dp"
-                android:color="#FFCD201F" />
+                android:color="@color/rokid_focus_green" />
             <padding
                 android:left="6dp"
                 android:top="4dp"
@@ -18,7 +18,7 @@
             <solid android:color="@android:color/transparent" />
             <stroke
                 android:width="4dp"
-                android:color="#FFCD201F" />
+                android:color="@color/rokid_focus_green" />
             <padding
                 android:left="6dp"
                 android:top="4dp"
@@ -31,7 +31,7 @@
             <solid android:color="#22000000" />
             <stroke
                 android:width="4dp"
-                android:color="#FFFFFFFF" />
+                android:color="@color/rokid_focus_green" />
             <padding
                 android:left="6dp"
                 android:top="4dp"

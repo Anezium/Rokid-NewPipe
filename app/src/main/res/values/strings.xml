@@ -920,6 +920,16 @@
     <string name="rokid_move_down">Move down</string>
     <string name="rokid_home_videos" translatable="false">Videos</string>
     <string name="rokid_home_live" translatable="false">Live</string>
+    <string name="rokid_kiosk_gaming" translatable="false">Gaming</string>
+    <string name="rokid_kiosk_music" translatable="false">Music</string>
+    <string name="rokid_kiosk_movies" translatable="false">Movies</string>
+    <string name="rokid_kiosk_podcasts" translatable="false">Podcasts</string>
+    <string name="rokid_kiosk_new_hot" translatable="false">New</string>
+    <string name="rokid_kiosk_recent" translatable="false">Recent</string>
+    <string name="rokid_kiosk_top" translatable="false">Top</string>
+    <string name="rokid_kiosk_featured" translatable="false">Featured</string>
+    <string name="rokid_kiosk_radio" translatable="false">Radio</string>
+    <string name="rokid_kiosk_trending" translatable="false">Trending</string>
     <string name="rokid_player_actions" translatable="false">Player actions</string>
     <string name="rokid_player_play" translatable="false">Play</string>
     <string name="rokid_player_pause" translatable="false">Pause</string>

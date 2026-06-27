@@ -23,7 +23,8 @@ These screenshots were captured from the app running on Rokid glasses.
 
 ## What Changed
 
-- Rokid-first home screen with `VIDEOS` and `LIVE` kept in the top bar.
+- Rokid-first home screen with `Search` followed by available NewPipe kiosk categories
+  kept in the top bar.
 - Search opens with the Rokid-friendly on-screen keyboard.
 - One-axis navigation: swipe moves focus, tap activates, back exits.
 - Directional debounce prevents one physical swipe from jumping twice.
@@ -49,8 +50,8 @@ must work with the real swipe axis plus tap/back.
 
 ## Main Screens
 
-- **Home**: fast access to regular videos and live videos, with focusable top
-  sections and large list rows.
+- **Home**: fast access to search and service kiosk categories, with
+  focusable top sections and large list rows.
 - **Search**: empty search opens directly into the keyboard instead of forcing a
   phone keyboard path.
 - **Video detail**: compact metadata and quick play behavior for a HUD-sized

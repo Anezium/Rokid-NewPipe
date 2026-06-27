@@ -249,6 +249,13 @@ public final class RokidFocusNavigator {
             return false;
         }
 
+        return focusSearchAction(activity, root);
+    }
+
+    private static boolean focusSearchAction(
+            final Activity activity,
+            final View root
+    ) {
         final View searchAction = findVisibleViewById(root, R.id.action_search);
         if (searchAction == null || !searchAction.isShown() || !searchAction.isEnabled()) {
             return false;

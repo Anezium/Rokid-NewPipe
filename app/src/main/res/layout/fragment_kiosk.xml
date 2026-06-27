@@ -12,47 +12,29 @@
         android:layout_height="56dp"
         android:layout_alignParentTop="true"
         android:background="@android:color/black"
-        android:gravity="center"
         android:orientation="horizontal"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
         android:visibility="gone">
 
-        <TextView
-            android:id="@+id/rokid_section_videos_button"
-            android:layout_width="0dp"
-            android:layout_height="44dp"
-            android:layout_marginEnd="6dp"
-            android:layout_weight="1"
-            android:background="@drawable/rokid_outline_button"
-            android:clickable="true"
-            android:contentDescription="@string/rokid_home_videos"
-            android:focusable="true"
-            android:focusableInTouchMode="true"
-            android:gravity="center"
-            android:text="@string/rokid_home_videos"
-            android:textAllCaps="true"
-            android:textColor="@android:color/white"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+        <HorizontalScrollView
+            android:id="@+id/rokid_section_nav_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:fillViewport="false"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:overScrollMode="never"
+            android:scrollbars="none">
 
-        <TextView
-            android:id="@+id/rokid_section_live_button"
-            android:layout_width="0dp"
-            android:layout_height="44dp"
-            android:layout_marginStart="6dp"
-            android:layout_weight="1"
-            android:background="@drawable/rokid_outline_button"
-            android:clickable="true"
-            android:contentDescription="@string/rokid_home_live"
-            android:focusable="true"
-            android:focusableInTouchMode="true"
-            android:gravity="center"
-            android:text="@string/rokid_home_live"
-            android:textAllCaps="true"
-            android:textColor="@android:color/white"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            <LinearLayout
+                android:id="@+id/rokid_section_nav_items"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp" />
+        </HorizontalScrollView>
     </LinearLayout>
 
     <org.schabi.newpipe.views.NewPipeRecyclerView

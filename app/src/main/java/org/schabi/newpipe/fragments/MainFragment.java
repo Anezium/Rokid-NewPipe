@@ -40,7 +40,7 @@ import org.schabi.newpipe.error.ErrorInfo;
 import org.schabi.newpipe.error.ErrorUtil;
 import org.schabi.newpipe.error.UserAction;
 import org.schabi.newpipe.local.playlist.LocalPlaylistFragment;
-import org.schabi.newpipe.rokid.RokidKioskNavigator;
+import org.schabi.newpipe.rokid.RokidKioskNavBar;
 import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.settings.tabs.Tab;
 import org.schabi.newpipe.settings.tabs.TabsManager;
@@ -166,6 +166,12 @@ public class MainFragment extends BaseFragment implements TabLayout.OnTabSelecte
                     + "menu = [" + menu + "], inflater = [" + inflater + "]");
         }
         inflater.inflate(R.menu.menu_main_fragment, menu);
+        if (RokidMode.enabled()) {
+            final MenuItem searchItem = menu.findItem(R.id.action_search);
+            if (searchItem != null) {
+                searchItem.setVisible(false);
+            }
+        }
 
         final ActionBar supportActionBar = activity.getSupportActionBar();
         if (supportActionBar != null) {
@@ -275,15 +281,13 @@ public class MainFragment extends BaseFragment implements TabLayout.OnTabSelecte
     }
 
     private void setupRokidHomeNav() {
-        binding.rokidHomeVideosButton.setOnClickListener(v -> openRokidKiosk(false));
-        binding.rokidHomeLiveButton.setOnClickListener(v -> openRokidKiosk(true));
-    }
-
-    private void openRokidKiosk(final boolean live) {
         try {
-            RokidKioskNavigator.open(this, live);
+            RokidKioskNavBar.populate(this, binding.rokidHomeNavScroll,
+                    binding.rokidHomeNavItems, null,
+                    (item, e) -> ErrorUtil.showUiErrorSnackbar(this,
+                            "Opening " + item.getLabel(), e));
         } catch (final Exception e) {
-            ErrorUtil.showUiErrorSnackbar(this, live ? "Opening live" : "Opening videos", e);
+            ErrorUtil.showUiErrorSnackbar(this, "Loading Rokid home sections", e);
         }
     }
 

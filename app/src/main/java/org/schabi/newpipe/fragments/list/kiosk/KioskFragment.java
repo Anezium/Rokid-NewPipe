@@ -11,6 +11,8 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.HorizontalScrollView;
+import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -32,7 +34,7 @@ import org.schabi.newpipe.extractor.localization.ContentCountry;
 import org.schabi.newpipe.extractor.services.media_ccc.extractors.MediaCCCLiveStreamKiosk;
 import org.schabi.newpipe.extractor.stream.StreamInfoItem;
 import org.schabi.newpipe.fragments.list.BaseListInfoFragment;
-import org.schabi.newpipe.rokid.RokidKioskNavigator;
+import org.schabi.newpipe.rokid.RokidKioskNavBar;
 import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.util.ExtractorHelper;
 import org.schabi.newpipe.util.KioskTranslator;
@@ -119,26 +121,17 @@ public class KioskFragment extends BaseListInfoFragment<StreamInfoItem, KioskInf
         }
 
         final View nav = rootView.findViewById(R.id.rokid_section_nav);
-        final View videos = rootView.findViewById(R.id.rokid_section_videos_button);
-        final View live = rootView.findViewById(R.id.rokid_section_live_button);
+        final HorizontalScrollView scrollView = rootView.findViewById(
+                R.id.rokid_section_nav_scroll);
+        final LinearLayout items = rootView.findViewById(R.id.rokid_section_nav_items);
         nav.setVisibility(View.VISIBLE);
-        videos.setOnClickListener(v -> openRokidSection(false));
-        live.setOnClickListener(v -> openRokidSection(true));
-
-        final boolean liveSelected = "live".equals(kioskId);
-        final View selected = liveSelected ? live : videos;
-        selected.post(() -> {
-            selected.requestFocusFromTouch();
-            selected.requestFocus();
-        });
-    }
-
-    private void openRokidSection(final boolean live) {
         try {
-            RokidKioskNavigator.open(this, live);
+            RokidKioskNavBar.populate(this, scrollView, items, kioskId,
+                    (item, e) -> showSnackBarError(new ErrorInfo(e, UserAction.UI_ERROR,
+                            "Opening " + item.getLabel())));
         } catch (final Exception e) {
             showSnackBarError(new ErrorInfo(e, UserAction.UI_ERROR,
-                    live ? "Opening live" : "Opening videos"));
+                    "Loading Rokid sections"));
         }
     }
 

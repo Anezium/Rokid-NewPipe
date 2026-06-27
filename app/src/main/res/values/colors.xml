@@ -64,6 +64,7 @@
 
     <color name="transparent_background_color">#00000000</color>
     <color name="selected_background_color">#22FFFFFF</color>
+    <color name="rokid_focus_green">#39FF14</color>
 
     <!-- GigaGet theme -->
     <color name="bluegray">#607D8B</color>
