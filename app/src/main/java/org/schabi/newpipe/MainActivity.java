@@ -89,6 +89,7 @@ import org.schabi.newpipe.rokid.RokidFocusNavigator;
 import org.schabi.newpipe.rokid.RokidKeyMapper;
 import org.schabi.newpipe.rokid.RokidKeyboardController;
 import org.schabi.newpipe.rokid.RokidMode;
+import org.schabi.newpipe.rokid.RokidRingReceiver;
 import org.schabi.newpipe.settings.UpdateSettingsFragment;
 import org.schabi.newpipe.settings.migration.MigrationManager;
 import org.schabi.newpipe.util.Constants;
@@ -123,6 +124,7 @@ public class MainActivity extends AppCompatActivity {
     private ToolbarLayoutBinding toolbarLayoutBinding;
 
     private ActionBarDrawerToggle toggle;
+    private RokidRingReceiver rokidRingReceiver;
 
     private boolean servicesShown = false;
 
@@ -240,6 +242,7 @@ public class MainActivity extends AppCompatActivity {
         super.onStart();
         sharedPrefEditor.putBoolean(KEY_IS_IN_BACKGROUND, false).apply();
         Log.d(TAG, "App moved to foreground");
+        rokidRingReceiver = RokidRingReceiver.register(this);
     }
 
     @Override
@@ -247,6 +250,8 @@ public class MainActivity extends AppCompatActivity {
         super.onStop();
         sharedPrefEditor.putBoolean(KEY_IS_IN_BACKGROUND, true).apply();
         Log.d(TAG, "App moved to background");
+        RokidRingReceiver.unregister(this, rokidRingReceiver);
+        rokidRingReceiver = null;
     }
     private void setupDrawer() throws ExtractionException {
         addDrawerMenuForCurrentService();
@@ -614,6 +619,12 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
 
+            if (RokidKeyMapper.isDoubleTapKey(event.getKeyCode())
+                    && bottomSheetHiddenOrCollapsed()
+                    && RokidFocusNavigator.handleListDoubleTap(this)) {
+                return true;
+            }
+
             if (dispatchToOnKeyDownListeners(getSupportFragmentManager(), event.getKeyCode())) {
                 return true;
             }
@@ -703,6 +714,15 @@ public class MainActivity extends AppCompatActivity {
                 mainBinding.getRoot().closeDrawers();
                 return;
             }
+        }
+
+        // Rokid glasses: the touchpad double-tap arrives as a Back event. When focus is below the
+        // top of a list, the first Back returns to the top (categories / search bar) instead of
+        // leaving the screen; a second Back at the top exits normally.
+        if (RokidMode.enabled() && bottomSheetHiddenOrCollapsed()
+                && !mainBinding.getRoot().isDrawerOpen(drawerLayoutBinding.navigation)
+                && RokidFocusNavigator.handleBackToTop(this)) {
+            return;
         }
 
         // In case bottomSheet is not visible on the screen or collapsed we can assume that the user

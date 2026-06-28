@@ -4,6 +4,7 @@ import android.os.SystemClock;
 import android.view.KeyEvent;
 
 public final class RokidKeyMapper {
+    public static final int KEYCODE_ROKID_DOUBLE_TAP = 202;
     private static final long DIRECTION_DEBOUNCE_MS = 240L;
     private static long lastDirectionAt;
 
@@ -60,7 +61,7 @@ public final class RokidKeyMapper {
             case KeyEvent.KEYCODE_ENTER:
             case KeyEvent.KEYCODE_NUMPAD_ENTER:
             case KeyEvent.KEYCODE_SPACE:
-            case 202:
+            case KEYCODE_ROKID_DOUBLE_TAP:
                 return Action.SELECT;
             case KeyEvent.KEYCODE_BACK:
                 return Action.BACK;
@@ -93,6 +94,10 @@ public final class RokidKeyMapper {
             default:
                 return false;
         }
+    }
+
+    public static boolean isDoubleTapKey(final int keyCode) {
+        return keyCode == KEYCODE_ROKID_DOUBLE_TAP;
     }
 
     static void resetDebounceForTesting() {

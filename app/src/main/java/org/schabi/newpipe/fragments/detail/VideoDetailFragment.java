@@ -107,6 +107,7 @@ import org.schabi.newpipe.player.playqueue.SinglePlayQueue;
 import org.schabi.newpipe.player.ui.MainPlayerUi;
 import org.schabi.newpipe.player.ui.VideoPlayerUi;
 import org.schabi.newpipe.rokid.RokidDialogNavigationHelper;
+import org.schabi.newpipe.rokid.RokidKeyMapper;
 import org.schabi.newpipe.rokid.RokidKeyboardController;
 import org.schabi.newpipe.rokid.RokidMode;
 import org.schabi.newpipe.util.AccessibilityUtils;
@@ -711,6 +712,12 @@ public final class VideoDetailFragment
     @Override
     public boolean onKeyDown(final int keyCode) {
         if (RokidMode.enabled()
+                && RokidKeyMapper.isDoubleTapKey(keyCode)
+                && handleRokidPlayerDoubleTap()) {
+            return true;
+        }
+
+        if (RokidMode.enabled()
                 && isRokidSelectKey(keyCode)
                 && enterRokidFullscreenFromDetail()) {
             return true;
@@ -719,6 +726,27 @@ public final class VideoDetailFragment
         return isPlayerAvailable()
                 && player.UIs().get(VideoPlayerUi.class)
                 .map(playerUi -> playerUi.onKeyDown(keyCode)).orElse(false);
+    }
+
+    private boolean handleRokidPlayerDoubleTap() {
+        if (!isPlayerAvailable()) {
+            return false;
+        }
+
+        if (isFullscreen()) {
+            restoreDefaultOrientation();
+            setAutoPlay(false);
+            return true;
+        }
+
+        if (bottomSheetBehavior != null
+                && bottomSheetState != BottomSheetBehavior.STATE_HIDDEN
+                && bottomSheetState != BottomSheetBehavior.STATE_COLLAPSED) {
+            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+            return true;
+        }
+
+        return false;
     }
 
     private boolean enterRokidFullscreenFromDetail() {
@@ -745,7 +773,6 @@ public final class VideoDetailFragment
             case KeyEvent.KEYCODE_ENTER:
             case KeyEvent.KEYCODE_NUMPAD_ENTER:
             case KeyEvent.KEYCODE_SPACE:
-            case 202:
                 return true;
             default:
                 return false;

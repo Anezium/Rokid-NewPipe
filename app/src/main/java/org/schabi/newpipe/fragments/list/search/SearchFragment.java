@@ -720,8 +720,10 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
             Log.d(TAG, "showSuggestionsPanel() called");
         }
         if (RokidMode.enabled()) {
-            suggestionsPanelVisible = false;
-            searchBinding.suggestionsPanel.setVisibility(View.GONE);
+            // On glasses the panel hosts the swipe-navigable search history. Show it without the
+            // slide animation so it is ready to navigate as soon as the keyboard is dismissed.
+            suggestionsPanelVisible = true;
+            searchBinding.suggestionsPanel.setVisibility(View.VISIBLE);
             return;
         }
         suggestionsPanelVisible = true;

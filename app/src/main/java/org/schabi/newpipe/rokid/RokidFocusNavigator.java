@@ -33,6 +33,102 @@ public final class RokidFocusNavigator {
         return isViewWithIdShown(root, R.id.rokidActionRail);
     }
 
+    public static boolean handleListDoubleTap(@NonNull final Activity activity) {
+        final View root = activity.findViewById(android.R.id.content);
+        if (root == null) {
+            return false;
+        }
+
+        // Search results screen: a double-tap returns to the search bar and pulls the list back
+        // to the top, mirroring the home/kiosk top-nav double-tap. Home/kiosk screens expose
+        // dedicated nav containers; when none are present but a search bar is, we are on search.
+        // Handled before the list-context gate so the double-tap is always consumed here: an
+        // unconsumed double-tap is interpreted as Back by the glasses and would exit the screen.
+        if (!hasTopNavContainers(root)) {
+            final View searchBar = findVisibleViewById(root, R.id.toolbar_search_edit_text);
+            if (searchBar != null && searchBar.isEnabled()) {
+                scrollListToTop(activity, root);
+                requestRokidFocus(searchBar);
+                LAST_TARGETS.put(activity, searchBar);
+                return true;
+            }
+        }
+
+        if (!hasVisibleListContext(activity, root)) {
+            return false;
+        }
+
+        final View target = findTopNavigationTarget(root);
+        if (target != null) {
+            requestRokidFocus(target);
+            LAST_TARGETS.put(activity, target);
+            return true;
+        }
+
+        return scrollListToTop(activity, root);
+    }
+
+    // Back-to-top for Rokid glasses. The touchpad firmware delivers a double-tap as a BACK key
+    // event (there is no dedicated double-tap keycode), so "return to the top" is driven from the
+    // Back handler: when focus is below the top of a list, a Back press pulls the list to the top
+    // and focuses the top nav (home/kiosk) or the search bar (search results), and is consumed.
+    // When focus is already at the top, this returns false so Back exits the screen normally.
+    public static boolean handleBackToTop(@NonNull final Activity activity) {
+        final View root = activity.findViewById(android.R.id.content);
+        if (root == null) {
+            return false;
+        }
+        final View current = activity.getCurrentFocus();
+
+        // Home / kiosk: dedicated top nav containers exist.
+        if (hasTopNavContainers(root)) {
+            if (isInsideTopNav(current)) {
+                return false;
+            }
+            final View target = findTopNavigationTarget(root);
+            if (target == null) {
+                return false;
+            }
+            scrollListToTop(activity, root);
+            requestRokidFocus(target);
+            LAST_TARGETS.put(activity, target);
+            return true;
+        }
+
+        // Search results: returning to the top means focusing the search bar.
+        final View searchBar = findVisibleViewById(root, R.id.toolbar_search_edit_text);
+        if (searchBar != null && searchBar.isEnabled()
+                && current != searchBar && hasVisibleListContext(activity, root)) {
+            scrollListToTop(activity, root);
+            requestRokidFocus(searchBar);
+            LAST_TARGETS.put(activity, searchBar);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static boolean isInsideTopNav(final View view) {
+        return hasAncestorWithId(view, R.id.rokid_home_nav_items)
+                || hasAncestorWithId(view, R.id.rokid_section_nav_items);
+    }
+
+    private static boolean hasTopNavContainers(final View root) {
+        return findVisibleViewById(root, R.id.rokid_home_nav_items) != null
+                || findVisibleViewById(root, R.id.rokid_section_nav_items) != null;
+    }
+
+    private static boolean scrollListToTop(final Activity activity, final View root) {
+        final RecyclerView recyclerView = findVisibleRecyclerViewById(root, R.id.items_list);
+        if (recyclerView != null) {
+            recyclerView.stopScroll();
+            recyclerView.scrollToPosition(0);
+            rememberRecyclerTarget(activity, recyclerView, 0);
+            return true;
+        }
+        return false;
+    }
+
     public static boolean handle(
             @NonNull final Activity activity,
             @NonNull final KeyEvent event
@@ -435,6 +531,69 @@ public final class RokidFocusNavigator {
         LAST_TARGETS.put(activity, target);
         rememberRecyclerTarget(activity, recyclerView, adapterPosition);
         return focused || target.isFocused();
+    }
+
+    private static boolean hasVisibleListContext(
+            @NonNull final Activity activity,
+            @NonNull final View root
+    ) {
+        if (isRokidRecycler(findVisibleRecyclerViewById(root, R.id.items_list))) {
+            return true;
+        }
+
+        final View current = activity.getCurrentFocus();
+        if (isRokidRecycler(findAncestorRecyclerView(current))) {
+            return true;
+        }
+
+        final View lastTarget = LAST_TARGETS.get(activity);
+        if (isRokidRecycler(findAncestorRecyclerView(lastTarget))) {
+            return true;
+        }
+
+        final RecyclerFocusState state = LAST_RECYCLER_STATES.get(activity);
+        return state != null && isRokidRecycler(findVisibleRecyclerViewById(root,
+                state.recyclerViewId));
+    }
+
+    private static View findTopNavigationTarget(final View root) {
+        final int[] topNavContainers = {
+                R.id.rokid_home_nav_items,
+                R.id.rokid_section_nav_items
+        };
+
+        for (final int containerId : topNavContainers) {
+            final View container = findVisibleViewById(root, containerId);
+            final ArrayList<View> targets = collectTargets(container);
+            final View selected = findSelectedTarget(targets);
+            if (selected != null) {
+                return selected;
+            }
+            if (!targets.isEmpty()) {
+                return targets.get(0);
+            }
+        }
+
+        final int[] fallbackTargets = {
+                R.id.action_search,
+                R.id.toolbar_search_edit_text
+        };
+        for (final int targetId : fallbackTargets) {
+            final View target = findVisibleViewById(root, targetId);
+            if (target != null && target.isShown() && target.isEnabled()) {
+                return target;
+            }
+        }
+        return null;
+    }
+
+    private static View findSelectedTarget(final ArrayList<View> targets) {
+        for (final View target : targets) {
+            if (target.isSelected()) {
+                return target;
+            }
+        }
+        return null;
     }
 
     private static View findFirstRokidTarget(final View view) {

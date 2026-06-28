@@ -1,7 +1,6 @@
 package org.schabi.newpipe.rokid;
 
 import android.content.Context;
-import android.graphics.Color;
 import android.graphics.Typeface;
 import android.text.TextUtils;
 import android.view.Gravity;
@@ -13,6 +12,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import org.schabi.newpipe.R;
@@ -23,13 +23,13 @@ import org.schabi.newpipe.util.ServiceHelper;
 import java.util.List;
 
 public final class RokidKioskNavBar {
-    private static final int BUTTON_HEIGHT_DP = 44;
-    private static final int BUTTON_MIN_WIDTH_DP = 88;
+    private static final int BUTTON_HEIGHT_DP = 40;
+    private static final int BUTTON_MIN_WIDTH_DP = 84;
     private static final int BUTTON_MAX_WIDTH_DP = 160;
     private static final int BUTTON_HORIZONTAL_MARGIN_DP = 4;
     private static final int BUTTON_HORIZONTAL_PADDING_DP = 12;
-    private static final int BUTTON_TEXT_SIZE_SP = 14;
-    private static final int SCROLL_EDGE_PADDING_DP = 12;
+    private static final int BUTTON_TEXT_SIZE_SP = 13;
+    private static final int SCROLL_EDGE_PADDING_DP = 16;
 
     private RokidKioskNavBar() {
     }
@@ -124,6 +124,7 @@ public final class RokidKioskNavBar {
         button.setFocusableInTouchMode(true);
         button.setGravity(Gravity.CENTER);
         button.setIncludeFontPadding(false);
+        button.setLetterSpacing(0.08f);
         button.setMaxWidth(dp(context, BUTTON_MAX_WIDTH_DP));
         button.setMinWidth(dp(context, BUTTON_MIN_WIDTH_DP));
         button.setPadding(dp(context, BUTTON_HORIZONTAL_PADDING_DP), 0,
@@ -131,7 +132,8 @@ public final class RokidKioskNavBar {
         button.setSingleLine(true);
         button.setText(item.getLabel());
         button.setAllCaps(true);
-        button.setTextColor(Color.WHITE);
+        button.setTextColor(ContextCompat.getColorStateList(context,
+                R.color.rokid_hud_button_text));
         button.setTextSize(BUTTON_TEXT_SIZE_SP);
         button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         return button;

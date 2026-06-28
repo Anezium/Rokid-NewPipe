@@ -1,6 +1,8 @@
 package org.schabi.newpipe.rokid;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import android.view.KeyEvent;
 
@@ -53,6 +55,13 @@ public class RokidKeyMapperTest {
                 RokidKeyMapper.map(202, 1_000L));
         assertEquals(RokidKeyMapper.Action.BACK,
                 RokidKeyMapper.map(KeyEvent.KEYCODE_BACK, 1_000L));
+    }
+
+    @Test
+    public void customDoubleTapKeyIsRecognized() {
+        assertTrue(RokidKeyMapper.isDoubleTapKey(RokidKeyMapper.KEYCODE_ROKID_DOUBLE_TAP));
+        assertFalse(RokidKeyMapper.isDoubleTapKey(KeyEvent.KEYCODE_DPAD_CENTER));
+        assertFalse(RokidKeyMapper.isDoubleTapKey(KeyEvent.KEYCODE_BACK));
     }
 
     @Test

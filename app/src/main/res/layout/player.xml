@@ -145,7 +145,7 @@
                                 android:scrollHorizontally="true"
                                 android:singleLine="true"
                                 android:textColor="@android:color/white"
-                                android:textSize="15sp"
+                                android:textSize="20sp"
                                 android:textStyle="bold"
                                 tools:ignore="RtlHardcoded"
                                 tools:text="The Video Title LONG very LONG" />
@@ -160,7 +160,7 @@
                                 android:scrollHorizontally="true"
                                 android:singleLine="true"
                                 android:textColor="@android:color/white"
-                                android:textSize="12sp"
+                                android:textSize="16sp"
                                 tools:text="The Video Artist  LONG very LONG very Long" />
 
                         </LinearLayout>
@@ -596,7 +596,7 @@
                 <org.schabi.newpipe.views.NewPipeTextView
                     android:id="@+id/rokidActionPlayPause"
                     android:layout_width="0dp"
-                    android:layout_height="42dp"
+                    android:layout_height="46dp"
                     android:layout_weight="1"
                     android:background="@drawable/rokid_outline_button"
                     android:clickable="true"
@@ -605,14 +605,48 @@
                     android:gravity="center"
                     android:text="@string/rokid_player_play"
                     android:textAllCaps="true"
-                    android:textColor="@color/white"
-                    android:textSize="13sp"
+                    android:textColor="@color/rokid_hud_button_text"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <org.schabi.newpipe.views.NewPipeTextView
+                    android:id="@+id/rokidActionRewind"
+                    android:layout_width="0dp"
+                    android:layout_height="46dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/rokid_outline_button"
+                    android:clickable="true"
+                    android:contentDescription="@string/rewind"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="@string/rokid_seek_backward_static"
+                    android:textAllCaps="true"
+                    android:textColor="@color/rokid_hud_button_text"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <org.schabi.newpipe.views.NewPipeTextView
+                    android:id="@+id/rokidActionForward"
+                    android:layout_width="0dp"
+                    android:layout_height="46dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/rokid_outline_button"
+                    android:clickable="true"
+                    android:contentDescription="@string/forward"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="@string/rokid_seek_forward_static"
+                    android:textAllCaps="true"
+                    android:textColor="@color/rokid_hud_button_text"
+                    android:textSize="16sp"
                     android:textStyle="bold" />
 
                 <org.schabi.newpipe.views.NewPipeTextView
                     android:id="@+id/rokidActionFullscreen"
                     android:layout_width="0dp"
-                    android:layout_height="42dp"
+                    android:layout_height="46dp"
                     android:layout_marginStart="8dp"
                     android:layout_weight="1"
                     android:background="@drawable/rokid_outline_button"
@@ -622,25 +656,8 @@
                     android:gravity="center"
                     android:text="@string/rokid_player_fullscreen"
                     android:textAllCaps="true"
-                    android:textColor="@color/white"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-
-                <org.schabi.newpipe.views.NewPipeTextView
-                    android:id="@+id/rokidActionQuality"
-                    android:layout_width="0dp"
-                    android:layout_height="42dp"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/rokid_outline_button"
-                    android:clickable="true"
-                    android:contentDescription="@string/rokid_player_quality"
-                    android:focusable="true"
-                    android:gravity="center"
-                    android:text="@string/rokid_player_quality"
-                    android:textAllCaps="true"
-                    android:textColor="@color/white"
-                    android:textSize="13sp"
+                    android:textColor="@color/rokid_hud_button_text"
+                    android:textSize="16sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
@@ -652,9 +669,26 @@
                 android:orientation="horizontal">
 
                 <org.schabi.newpipe.views.NewPipeTextView
+                    android:id="@+id/rokidActionQuality"
+                    android:layout_width="0dp"
+                    android:layout_height="46dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/rokid_outline_button"
+                    android:clickable="true"
+                    android:contentDescription="@string/rokid_player_quality"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="@string/rokid_player_quality"
+                    android:textAllCaps="true"
+                    android:textColor="@color/rokid_hud_button_text"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <org.schabi.newpipe.views.NewPipeTextView
                     android:id="@+id/rokidActionSpeed"
                     android:layout_width="0dp"
-                    android:layout_height="42dp"
+                    android:layout_height="46dp"
+                    android:layout_marginStart="8dp"
                     android:layout_weight="1"
                     android:background="@drawable/rokid_outline_button"
                     android:clickable="true"
@@ -663,14 +697,14 @@
                     android:gravity="center"
                     android:text="@string/rokid_player_speed"
                     android:textAllCaps="true"
-                    android:textColor="@color/white"
-                    android:textSize="13sp"
+                    android:textColor="@color/rokid_hud_button_text"
+                    android:textSize="16sp"
                     android:textStyle="bold" />
 
                 <org.schabi.newpipe.views.NewPipeTextView
                     android:id="@+id/rokidActionCaptions"
                     android:layout_width="0dp"
-                    android:layout_height="42dp"
+                    android:layout_height="46dp"
                     android:layout_marginStart="8dp"
                     android:layout_weight="1"
                     android:background="@drawable/rokid_outline_button"
@@ -680,14 +714,14 @@
                     android:gravity="center"
                     android:text="@string/rokid_player_subtitles"
                     android:textAllCaps="true"
-                    android:textColor="@color/white"
-                    android:textSize="13sp"
+                    android:textColor="@color/rokid_hud_button_text"
+                    android:textSize="16sp"
                     android:textStyle="bold" />
 
                 <org.schabi.newpipe.views.NewPipeTextView
                     android:id="@+id/rokidActionClose"
                     android:layout_width="0dp"
-                    android:layout_height="42dp"
+                    android:layout_height="46dp"
                     android:layout_marginStart="8dp"
                     android:layout_weight="1"
                     android:background="@drawable/rokid_outline_button"
@@ -697,8 +731,8 @@
                     android:gravity="center"
                     android:text="@string/rokid_player_close"
                     android:textAllCaps="true"
-                    android:textColor="@color/white"
-                    android:textSize="13sp"
+                    android:textColor="@color/rokid_hud_button_text"
+                    android:textSize="16sp"
                     android:textStyle="bold" />
             </LinearLayout>
         </LinearLayout>
