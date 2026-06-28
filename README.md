@@ -12,7 +12,9 @@ screens usable directly from the glasses, without hunting through phone-style
 menus or relying on vertical gestures.
 
 <p align="center">
-  <a href="https://ko-fi.com/anezium">Support Anezium on Ko-fi</a>
+  <a href="https://ko-fi.com/anezium" target="_blank">
+    <img height="36" style="border:0px;height:36px;" src="https://storage.ko-fi.com/cdn/kofi4.png?v=6" border="0" alt="Buy Me a Coffee at ko-fi.com" />
+  </a>
 </p>
 
 ## Screenshots From The Glasses
