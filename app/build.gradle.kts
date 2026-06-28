@@ -60,7 +60,6 @@ configure<ApplicationExtension> {
     buildTypes {
         debug {
             isDebuggable = true
-            resValue("string", "app_name", "Rokid NewPipe Debug")
         }
 
         release {

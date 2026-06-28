@@ -11,7 +11,8 @@ menus or relying on vertical gestures.
 
 ## Screenshots From The Glasses
 
-These screenshots were captured from the app running on Rokid glasses.
+These screenshots were captured from the app running on Rokid glasses
+(`480x640`, refreshed on 2026-06-28).
 
 | Home | Search keyboard |
 | --- | --- |
@@ -48,6 +49,22 @@ These screenshots were captured from the app running on Rokid glasses.
 defensive Android compatibility aliases in code, because the target glasses flow
 must work with the real swipe axis plus tap/back.
 
+## R08 Access Bridge
+
+R08 Access Bridge `v1.4.7` adds Rokid NewPipe compatibility. When NewPipe is the
+active app, the bridge forwards R08 ring navigation into NewPipe's own one-axis
+navigator instead of trying to drive the phone UI model.
+
+- R08 swipe forward/back moves through NewPipe focus.
+- R08 single tap activates the focused item.
+- R08 double tap performs Android Back.
+- Use R08 Access Bridge Stable mode for the most predictable input.
+
+Install the latest bridge from
+[R08 Access Bridge releases](https://github.com/Anezium/R08-Access-Bridge/releases/latest),
+enable its Accessibility Service on the glasses, pair the R08 ring, then launch
+Rokid NewPipe.
+
 ## Main Screens
 
 - **Home**: fast access to search and service kiosk categories, with
@@ -60,6 +77,9 @@ must work with the real swipe axis plus tap/back.
   speed, subtitles, and exit.
 
 ## Build
+
+Downloadable APKs are published in
+[Rokid NewPipe releases](https://github.com/Anezium/Rokid-NewPipe/releases).
 
 ```powershell
 .\gradlew.bat :app:assembleDebug

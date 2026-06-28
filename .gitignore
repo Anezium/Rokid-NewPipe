@@ -13,6 +13,11 @@ captures/
 app/debug/
 app/release/
 
+# Rokid local scratch (planning + adb diagnostics, kept on disk, out of git)
+/plan.md
+/rokid-newpipe-*.png
+/rokid-window*.xml
+
 # vscode / eclipse files
 *.classpath
 *.project
