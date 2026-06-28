@@ -1,5 +1,9 @@
 # Rokid NewPipe
 
+<p align="center">
+  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="Rokid NewPipe app icon" width="150">
+</p>
+
 NewPipe adapted for Rokid glasses.
 
 This fork is focused on a 480 x 640, no-touch glasses workflow: swipe, tap,
@@ -7,7 +11,9 @@ back. The goal is to keep the useful parts of NewPipe while making the core
 screens usable directly from the glasses, without hunting through phone-style
 menus or relying on vertical gestures.
 
-[Support Anezium on Ko-fi](https://ko-fi.com/anezium)
+<p align="center">
+  <a href="https://ko-fi.com/anezium">Support Anezium on Ko-fi</a>
+</p>
 
 ## Screenshots From The Glasses
 
